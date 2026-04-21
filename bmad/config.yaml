@@ -1,0 +1,28 @@
+# BMAD Method v6 - Project Configuration
+# Generated: 2025-04-22T00:00:00Z
+# Project: ModelLens
+
+# BMAD Version
+bmad_version: "6.0.0"
+
+# Project Information
+project_name: "ModelLens"
+project_type: "web-app"
+project_level: 1
+
+# Output Configuration
+output_folder: "docs"
+stories_folder: "docs/stories"
+
+# Language Settings
+communication_language: "English"
+document_output_language: "English"
+
+# Project Metadata
+project_description: "High-performance LLM model database browser — Rust/Axum server with in-memory data, Leptos WASM client"
+tech_stack:
+  - "Rust"
+  - "Leptos 0.7+"
+  - "Axum"
+  - "WASM"
+  - "cargo-leptos"

@@ -1,0 +1,113 @@
+# BMAD Method Workflow Status
+# Generated: 2025-04-22T00:00:00Z
+# Project: ModelLens
+
+# Project Information
+project_name: "ModelLens"
+project_type: "web-app"
+project_level: 1
+communication_language: "English"
+output_language: "English"
+last_updated: "2025-04-22T12:00:00Z"
+
+# Workflow Status Tracking
+# Status values:
+#   - "required" - Must be completed to proceed
+#   - "recommended" - Strongly suggested but not blocking
+#   - "optional" - Can be skipped without impact
+#   - "{file-path}" - Completed (path to output file)
+#   - "skipped" - Explicitly skipped by user
+
+workflow_status:
+  # ============================================================
+  # Phase 1: Analysis (Optional but recommended)
+  # ============================================================
+  - name: product-brief
+    phase: 1
+    status: "optional"
+    description: "Create comprehensive product brief with vision and high-level requirements"
+    command: "/product-brief"
+
+  - name: brainstorm-project
+    phase: 1
+    status: "optional"
+    description: "Structured brainstorming session for features and solutions"
+    command: "/brainstorm"
+
+  - name: research
+    phase: 1
+    status: "optional"
+    description: "Market analysis, competitive research, and technical investigation"
+    command: "/research"
+
+  # ============================================================
+  # Phase 2: Planning (Required - choose based on project level)
+  # ============================================================
+  - name: prd
+    phase: 2
+    status: "PRD.md"
+    description: "Product Requirements Document - comprehensive requirements for multi-feature projects"
+    command: "/prd"
+    notes: "Already completed for ModelLens"
+
+  - name: tech-spec
+    phase: 2
+    status: "docs/tech-spec.md"
+    description: "Technical Specification - detailed technical design for implementation"
+    command: "/tech-spec"
+    notes: "Completed for ModelLens"
+
+  - name: create-ux-design
+    phase: 2
+    status: "optional"
+    description: "UX/UI design workflow with wireframes and user flows"
+    command: "/create-ux-design"
+    notes: "Recommended for user-facing features"
+
+  # ============================================================
+  # Phase 3: Solutioning (Required for Level 2+)
+  # ============================================================
+  - name: architecture
+    phase: 3
+    status: "optional"
+    description: "System architecture design with components and integrations"
+    command: "/architecture"
+    notes: "Optional for Level 1 projects — PRD already covers architecture"
+
+  - name: solutioning-gate-check
+    phase: 3
+    status: "optional"
+    description: "Validate architecture against requirements before implementation"
+    command: "/solutioning-gate-check"
+    notes: "Recommended for Level 3+ projects"
+
+  # ============================================================
+  # Phase 4: Implementation (Required)
+  # ============================================================
+  - name: sprint-planning
+    phase: 4
+    status: "docs/sprint-status.yaml"
+    description: "Break down requirements into epics and stories, create sprint plan"
+    command: "/sprint-planning"
+    notes: "11 stories created in docs/stories/"
+
+  - name: create-story
+    phase: 4
+    status: "conditional"
+    description: "Create individual user story with acceptance criteria"
+    command: "/create-story"
+    notes: "Use to add stories to existing sprint"
+
+  - name: dev-story
+    phase: 4
+    status: "conditional"
+    description: "Implement specific user story with code generation"
+    command: "/dev-story"
+    notes: "Execute story implementation"
+
+  - name: code-review
+    phase: 4
+    status: "optional"
+    description: "Review implemented code for quality and standards"
+    command: "/code-review"
+    notes: "Recommended for Level 2+ projects"
