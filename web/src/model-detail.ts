@@ -1,14 +1,22 @@
-import { LitElement, html, nothing } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import type { Model } from "./api";
 import { formatContext, formatCost } from "./model-row";
+import type { Model } from "./api";
 
-@customElement("model-detail")
-export class ModelDetail extends LitElement {
-  @property({ attribute: false }) model: Model | null = null;
+export class ModelDetail extends HTMLElement {
+  private _model: Model | null = null;
 
-  createRenderRoot() {
-    return this;
+  set model(val: Model | null) {
+    this._model = val;
+    this.render();
+  }
+
+  get model(): Model | null {
+    return this._model;
+  }
+
+  connectedCallback() {
+    this.style.display = "block";
+    this.style.marginTop = "1.5rem";
+    this.render();
   }
 
   private handleClose() {
@@ -20,28 +28,14 @@ export class ModelDetail extends LitElement {
     );
   }
 
-  private renderBadges() {
-    const m = this.model;
-    if (!m) return nothing;
-    const badges: ReturnType<typeof html>[] = [];
-
-    if (m.tool_call) {
-      badges.push(html`<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-600 text-white mr-1">Tools</span>`);
-    }
-    if (m.reasoning) {
-      badges.push(html`<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-600 text-white mr-1">Reasoning</span>`);
-    }
-    if (m.attachment) {
-      badges.push(html`<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-green-600 text-white mr-1">Files</span>`);
-    }
-    if (m.open_weights) {
-      badges.push(html`<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-600 text-white mr-1">Open</span>`);
-    }
-    if (m.temperature) {
-      badges.push(html`<span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-600 text-white mr-1">Temperature</span>`);
-    }
-
-    return badges.length > 0 ? badges : html`<span class="text-gray-400">—</span>`;
+  private renderBadges(m: Model): string {
+    const badges: string[] = [];
+    if (m.tool_call) badges.push("Tools");
+    if (m.reasoning) badges.push("Reasoning");
+    if (m.attachment) badges.push("Files");
+    if (m.open_weights) badges.push("Open");
+    if (m.temperature) badges.push("Temperature");
+    return badges.length > 0 ? badges.join(", ") : "—";
   }
 
   private renderModalityList(items: string[] | undefined): string {
@@ -49,84 +43,58 @@ export class ModelDetail extends LitElement {
     return items.join(", ");
   }
 
-  render() {
-    const m = this.model;
-    if (!m) return nothing;
+  private render() {
+    const m = this._model;
+    if (!m) {
+      this.innerHTML = "";
+      return;
+    }
 
-    return html`
-      <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-gray-900">${m.name}</h2>
-          <button
-            class="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded"
-            @click=${this.handleClose}
-          >
+    const fields: [string, string][] = [
+      ["Provider", m.provider_id],
+      ["Name", m.name],
+      ["ID", `<code style="font-size:0.75rem;color:#4b5563;">${m.id}</code>`],
+      ["Family", m.family ?? "—"],
+      ["Context Window", formatContext(m.limit?.context ?? null)],
+      ["Output Limit", formatContext(m.limit?.output ?? null)],
+      ["Input Cost", formatCost(m.cost?.input ?? null)],
+      ["Output Cost", formatCost(m.cost?.output ?? null)],
+      ["Input Modalities", this.renderModalityList(m.modalities?.input)],
+      ["Output Modalities", this.renderModalityList(m.modalities?.output)],
+      ["Features", this.renderBadges(m)],
+      ["Knowledge Cutoff", m.knowledge ?? "—"],
+      ["Release Date", m.release_date ?? "—"],
+      ["Last Updated", m.last_updated ?? "—"],
+    ];
+
+    this.innerHTML = `
+      <div style="background:#fff;border-radius:0.5rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);border:1px solid #e5e7eb;padding:1.5rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <h2 style="font-size:1.125rem;font-weight:600;color:#111827;">${m.name}</h2>
+          <button id="close-detail" style="padding:0.25rem 0.75rem;font-size:0.875rem;color:#4b5563;background:none;border:1px solid #e5e7eb;border-radius:0.25rem;cursor:pointer;">
             ✕ Close
           </button>
         </div>
-
-        <div class="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
-          <div>
-            <span class="text-gray-500 font-medium">Provider</span>
-            <div class="mt-0.5">${m.provider_id}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Name</span>
-            <div class="mt-0.5">${m.name}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">ID</span>
-            <div class="mt-0.5 font-mono text-xs text-gray-600">${m.id}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Family</span>
-            <div class="mt-0.5">${m.family ?? "—"}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Context Window</span>
-            <div class="mt-0.5">${formatContext(m.limit?.context ?? null)}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Output Limit</span>
-            <div class="mt-0.5">${formatContext(m.limit?.output ?? null)}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Input Cost</span>
-            <div class="mt-0.5">${formatCost(m.cost?.input ?? null)}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Output Cost</span>
-            <div class="mt-0.5">${formatCost(m.cost?.output ?? null)}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Input Modalities</span>
-            <div class="mt-0.5">${this.renderModalityList(m.modalities?.input)}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Output Modalities</span>
-            <div class="mt-0.5">${this.renderModalityList(m.modalities?.output)}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Features</span>
-            <div class="mt-0.5">${this.renderBadges()}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Knowledge Cutoff</span>
-            <div class="mt-0.5">${m.knowledge ?? "—"}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Release Date</span>
-            <div class="mt-0.5">${m.release_date ?? "—"}</div>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">Last Updated</span>
-            <div class="mt-0.5">${m.last_updated ?? "—"}</div>
-          </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem 2rem;font-size:0.875rem;">
+          ${fields
+            .map(
+              ([label, value]) => `
+              <div style="padding:0.25rem 0;">
+                <span style="color:#6b7280;font-weight:500;display:block;font-size:0.75rem;">${label}</span>
+                <div style="margin-top:0.125rem;">${value}</div>
+              </div>
+            `
+            )
+            .join("")}
         </div>
       </div>
     `;
+
+    this.querySelector("#close-detail")?.addEventListener("click", () => this.handleClose());
   }
 }
+
+customElements.define("model-detail", ModelDetail);
 
 declare global {
   interface HTMLElementTagNameMap {

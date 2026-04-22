@@ -3,7 +3,6 @@ import { customElement, state } from "lit/decorators.js";
 import { fetchModels, type Model, type SortField, type SortDir } from "./api";
 import "./model-search";
 import "./model-table";
-import "./infinite-scroll";
 import "./model-detail";
 
 @customElement("model-lens-app")
@@ -13,6 +12,9 @@ export class ModelLensApp extends LitElement {
       display: flex;
       flex-direction: column;
       min-height: 100vh;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   `;
 
@@ -144,15 +146,10 @@ export class ModelLensApp extends LitElement {
           .sortDir=${this.sortDir}
           @sort-changed=${this.handleSortChanged}
           @row-clicked=${this.handleRowClicked}
+          @load-more=${this.handleLoadMore}
         ></model-table>
 
-        ${this.isFetching ? html`<loading-spinner></loading-spinner>` : ""}
-
-        <infinite-scroll
-          .isFetching=${this.isFetching}
-          .hasMore=${hasMore}
-          @load-more=${this.handleLoadMore}
-        ></infinite-scroll>
+        ${this.isFetching ? html`<div style="display:flex;justify-content:center;padding:1rem;"><div style="width:2rem;height:2rem;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin 0.6s linear infinite;"></div></div>` : ""}
 
         ${this.selectedModel
           ? html`<model-detail
