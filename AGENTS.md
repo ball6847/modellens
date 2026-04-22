@@ -142,21 +142,21 @@ No test framework is currently configured. The `npm test` script is not set up i
 
 ## API Endpoints
 
-| Method | Path                                                    | Description            |
-| ------ | ------------------------------------------------------- | ---------------------- |
-| GET    | `/api/models?query=&sort_by=&sort_dir=&offset=&limit=`  | Search/paginate models |
-| GET    | `/api/models/:provider_id/:model_id`                    | Get model detail       |
-| GET    | `/api/models/:provider_id/:namespace/:model_id`         | Get model detail (namespaced IDs with slashes) |
+| Method | Path                                                   | Description                                    |
+| ------ | ------------------------------------------------------ | ---------------------------------------------- |
+| GET    | `/api/models?query=&sort_by=&sort_dir=&offset=&limit=` | Search/paginate models                         |
+| GET    | `/api/models/:provider_id/:model_id`                   | Get model detail                               |
+| GET    | `/api/models/:provider_id/:namespace/:model_id`        | Get model detail (namespaced IDs with slashes) |
 
 ## Environment Variables
 
-| Variable      | Default                     | Description                                    |
-| ------------- | --------------------------- | ---------------------------------------------- |
-| PORT          | 3000                        | Server port                                    |
-| API_FILE      | api.json                    | Local data file path                           |
-| API_REMOTE    | https://models.dev/api.json | Remote data source URL                         |
-| SKIP_SYNC     | false                       | Skip remote sync on startup                    |
-| SYNC_INTERVAL | 300                         | Auto-sync interval in seconds (0 = disabled)   |
+| Variable      | Default                     | Description                                  |
+| ------------- | --------------------------- | -------------------------------------------- |
+| PORT          | 3000                        | Server port                                  |
+| API_FILE      | api.json                    | Local data file path                         |
+| API_REMOTE    | https://models.dev/api.json | Remote data source URL                       |
+| SKIP_SYNC     | false                       | Skip remote sync on startup                  |
+| SYNC_INTERVAL | 300                         | Auto-sync interval in seconds (0 = disabled) |
 
 ## Key Constraints
 
