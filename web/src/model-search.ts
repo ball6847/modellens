@@ -55,7 +55,7 @@ export class ModelSearch extends LitElement {
           .value=${this.localQuery}
           @input=${this.handleInput}
         />
-        <span style="font-size:0.875rem;line-height:1.25rem;color:#4b5563;white-space:nowrap;">
+        <span class="whitespace-nowrap text-sm text-gray-600">
           Showing ${this.total.toLocaleString()} of ${this.allCount.toLocaleString()} models
         </span>
       </div>
