@@ -5,82 +5,82 @@
 sprint:
   name: "ModelLens MVP"
   goal: "Working model browser with search, sortable table, infinite scroll, and detail view"
-  status: "planning"
+  status: "complete"
 
 stories:
   - id: "S001"
     title: "Project Scaffolding"
     file: "docs/stories/S001-project-scaffolding.md"
-    status: "pending"
+    status: "done"
     priority: "critical"
     depends_on: []
 
   - id: "S002"
     title: "Data Layer (models + app_data)"
     file: "docs/stories/S002-data-layer.md"
-    status: "pending"
+    status: "done"
     priority: "critical"
     depends_on: ["S001"]
 
   - id: "S003"
     title: "REST API Endpoints (search + detail)"
     file: "docs/stories/S003-server-functions.md"
-    status: "pending"
+    status: "done"
     priority: "critical"
     depends_on: ["S002"]
 
   - id: "S004"
     title: "Root Shell & App Layout"
     file: "docs/stories/S004-root-shell.md"
-    status: "pending"
+    status: "done"
     priority: "high"
     depends_on: ["S003"]
 
   - id: "S005"
     title: "Search Box Component"
     file: "docs/stories/S005-search-box.md"
-    status: "pending"
+    status: "done"
     priority: "high"
     depends_on: ["S004"]
 
   - id: "S006"
     title: "Model Table Component"
     file: "docs/stories/S006-model-table.md"
-    status: "pending"
+    status: "done"
     priority: "high"
     depends_on: ["S004"]
 
   - id: "S007"
     title: "Infinite Scroll Component"
     file: "docs/stories/S007-infinite-scroll.md"
-    status: "pending"
+    status: "done"
     priority: "high"
     depends_on: ["S006"]
 
   - id: "S008"
     title: "Model Detail View"
     file: "docs/stories/S008-model-detail.md"
-    status: "pending"
+    status: "done"
     priority: "medium"
     depends_on: ["S006"]
 
   - id: "S009"
     title: "Tailwind CSS Styling"
     file: "docs/stories/S009-styling.md"
-    status: "pending"
+    status: "done"
     priority: "medium"
     depends_on: ["S005", "S006"]
 
   - id: "S010"
     title: "Unit Tests (data/search/sort/format)"
     file: "docs/stories/S010-testing.md"
-    status: "pending"
+    status: "done"
     priority: "medium"
     depends_on: ["S003"]
 
   - id: "S011"
     title: "Polish (error/empty states, mobile, a11y)"
     file: "docs/stories/S011-polish.md"
-    status: "pending"
+    status: "done"
     priority: "low"
     depends_on: ["S007", "S008", "S009"]

@@ -1,0 +1,20 @@
+{
+  "name": "modellens",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lit": "^3"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vite": "^6",
+    "tailwindcss": "^4",
+    "@tailwindcss/vite": "^4",
+    "postcss": "^8",
+    "autoprefixer": "^10"
+  }
+}

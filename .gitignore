@@ -1,0 +1,28 @@
+# Binaries
+bin/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Frontend
+web/node_modules/
+web/dist/
+cmd/server/dist/*
+!cmd/server/dist/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
