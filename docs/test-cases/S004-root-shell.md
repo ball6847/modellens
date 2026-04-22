@@ -9,25 +9,21 @@ this file **Total Cases:** 5 | P0: 1 | P1: 3 | P2: 1
 
 **Priority:** P0 (Critical) **Type:** UI **Preconditions:** Server running
 
-1. Navigate to `http://localhost:3000` **Expected:** Header bar visible at top
-   of page **Expected:** "ModelLens" text visible in header
+1. Navigate to the app URL **Expected:** Header bar visible at top of page
+   **Expected:** "ModelLens" text visible in header
 
 ---
 
-## TC-S004-002: Initial 100 models load via SSR
+## TC-S004-002: Initial 100 models load on page load
 
-**Priority:** P0 (Critical) **Type:** Functional **Preconditions:** Server
-running
+**Priority:** P1 (High) **Type:** Functional **Preconditions:** Server running
 
-1. View page source (before JS loads) **Expected:** HTML contains model data
-   rendered server-side
-
-2. After hydration, view page **Expected:** 100 models visible in content area
-   (unstyled is OK at this stage)
+1. Open the app, wait for page to load **Expected:** 100 models visible in
+   content area (unstyled is OK at this stage)
 
 ---
 
-## TC-S004-003: Page title and meta tags set
+## TC-S004-003: Page title set
 
 **Priority:** P2 (Medium) **Type:** UI **Preconditions:** Server running
 
@@ -39,16 +35,15 @@ running
 
 ---
 
-## TC-S004-004: Signals initialized correctly
+## TC-S004-004: Component state initialized correctly
 
 **Priority:** P1 (High) **Type:** Functional **Preconditions:** App component
 mounted
 
-1. Verify reactive signals exist:
-   - `query: RwSignal<Option<String>>` initialized to None
-   - `sort_by: RwSignal<SortField>` initialized to SortField::Name
-   - `sort_dir: RwSignal<SortDir>` initialized to SortDir::Asc **Expected:**
-     Default values set correctly
+1. Verify Lit-Element reactive properties initialized:
+   - `query` initialized to empty string
+   - `sortBy` initialized to "name"
+   - `sortDir` initialized to "asc" **Expected:** Default values set correctly
 
 ---
 

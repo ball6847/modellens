@@ -35,30 +35,29 @@ Then I see "$0.29" in the Input Cost column
 
 ## Tasks
 
-1. Create `src/components/model_table.rs` and `src/components/model_row.rs`
+1. Create `web/src/model-table.ts` and `web/src/model-row.ts` as Lit components
 2. Column headers: clickable, show sort indicator (arrow) for active sort column
-3. On column click: toggle sort_dir if same column, else set new sort_by + Asc
-4. Call `search_models(query, new_sort, 0, 100)` on sort change
-5. Render rows via ModelRow component
-6. Each row: Provider, Name, ID, formatted Context, formatted costs, Feature
+3. On column click: dispatch `sort-changed` event with `{ sortBy, sortDir }`
+4. Render rows via `<model-row>` component
+5. Each row: Provider, Name, ID, formatted Context, formatted costs, Feature
    badges
-7. Context formatting: >=1M → "X.XM", >=1K → "XK", else as-is
-8. Cost formatting: Some(x) → "$X.XX", None → "—"
-9. Badge colors: Tools=blue, Reasoning=purple, Files=green, Open=orange
-10. Row click handler: emit `(provider_id, model_id)` callback
+6. Context formatting: >=1M → "X.XM", >=1K → "XK", else as-is
+7. Cost formatting: value → "$X.XX", null → "—"
+8. Badge colors: Tools=blue, Reasoning=purple, Files=green, Open=orange
+9. Row click: dispatch `row-clicked` event with `{ providerId, modelId }`
 
 ## Technical Notes
 
-- Format functions: `format_context(v: Option<u64>) -> String`,
-  `format_cost(v: Option<f64>) -> String`
+- Format functions: `formatContext(v: number | null): string`,
+  `formatCost(v: number | null): string`
 - Sort callback triggers parent to re-fetch with new sort params
-- Use `class:` syntax for conditional Tailwind classes on badges
+- Use Tailwind classes for badge styling
 
 ## Verification
 
 - All 7 columns render with data
 - Sort by each column works (ascending + descending)
 - Context "128000" displays as "128K"
-- Cost 0.29 displays as "$0.29", None displays as "—"
+- Cost 0.29 displays as "$0.29", null displays as "—"
 - Badges render with correct colors for true values
 - Row click triggers callback

@@ -17,30 +17,31 @@ Given the app loads
 When I view the page
 Then I see a header with "ModelLens" branding
 And a content area below the header
-And the SSR-rendered first 100 models appear in the content area
+And the first 100 models appear in the content area
 ```
 
 ## Tasks
 
-1. Implement `App` component in `src/app.rs`
+1. Implement `<model-lens-app>` Lit component in `web/src/model-lens-app.ts`
 2. Layout: header bar (title "ModelLens") + main content area
-3. Call `search_models(None, SortField::Name, SortDir::Asc, 0, 100)` on mount
-   for SSR
-4. Store results in signals: `models: Signal<Vec<Model>>`,
-   `total: Signal<usize>`, `sort_by`, `sort_dir`, `query`
-5. Pass signals down to child component slots (search box area, table area)
-6. Add `<Title/>` and `<Meta/>` via leptos_meta
+3. On `connectedCallback()`: fetch `GET /api/models?offset=0&limit=100`
+4. Store state as reactive properties: `models`, `total`, `sortBy`, `sortDir`,
+   `query`, `offset`, `isFetching`
+5. Wire child components: `<model-search>`, `<model-table>`,
+   `<infinite-scroll>`
+6. Handle custom events from children (search-changed, sort-changed, load-more,
+   row-clicked)
+7. Set page title via `document.title`
 
 ## Technical Notes
 
-- Use `create_resource` or `spawn_local` for initial server function call
-- Signals: `query: RwSignal<Option<String>>`, `sort_by: RwSignal<SortField>`,
-  `sort_dir: RwSignal<SortDir>`
-- SSR: server function runs on server during render, client hydrates with same
-  data
+- Use `@state()` for internal reactive state, `@property()` for public props
+- Fetch via `api.ts` helper module
+- Event delegation: listen for custom events bubbled from child components
+- On sort/search change: reset offset, re-fetch, replace models
 
 ## Verification
 
 - Page renders with header
 - Initial 100 models load and display (even if unstyled)
-- No console errors on hydration
+- No console errors

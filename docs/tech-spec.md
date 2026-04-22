@@ -1,6 +1,6 @@
 # Technical Specification: ModelLens
 
-**Version:** 1.0\
+**Version:** 1.1\
 **Date:** 2025-04-22\
 **Project Level:** 1 (Small feature)\
 **Based on:** PRD.md
@@ -9,24 +9,26 @@
 
 ## 1. Executive Summary
 
-ModelLens is a Rust full-stack web application for browsing and searching LLM
-model databases. A Leptos 0.7+ WASM client communicates with an Axum server via
-typed server functions. The server loads the full `api.json` (~1.8MB, 4,274
-models) into memory at startup and serves paginated batches of 100 models. The
-browser never downloads the full dataset.
+ModelLens is a Go + Lit-Element web application for browsing and searching LLM
+model databases. A Go server loads the full `api.json` (~1.8MB, 4,274 models)
+into memory at startup and serves paginated batches of 100 models via REST API
+endpoints. The Lit-Element frontend fetches only what it needs. The browser
+never downloads the full dataset.
 
 ### Key Technical Decisions
 
-| Decision          | Choice                       | Rationale                                                          |
-| ----------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Framework         | Leptos 0.7+ full-stack       | SSR + WASM hydration from a single Rust codebase                   |
-| Server Runtime    | Axum (Leptos default)        | High-performance async runtime, Leptos integration                 |
-| Build Tool        | cargo-leptos                 | Official Leptos build tool for SSR + WASM                          |
-| Data Loading      | Runtime file read at startup | Allows data refresh without redeploy; binary stays small           |
-| Client-Server API | Leptos `#[server]` functions | Type-safe, no REST boilerplate, automatic serialization            |
-| Pagination        | Server-side, 100 per batch   | Small payloads (~15-20KB), fast round-trips                        |
-| Search            | Linear scan in-memory        | 4,274 structs with `str::contains` completes in microseconds       |
-| CSS               | Tailwind CSS                 | Utility-first, fast iteration, Leptos integration via cargo-leptos |
+| Decision          | Choice                      | Rationale                                                    |
+| ----------------- | --------------------------- | ------------------------------------------------------------ |
+| Server Language    | Go                          | Fast startup, efficient concurrency, simple deployment      |
+| HTTP Router        | Go net/http (1.22+ ServeMux)| Method/path pattern matching built-in, no external deps      |
+| Frontend Framework | Lit-Element (TypeScript)    | Lightweight Web Components, fast rendering, no framework lock-in |
+| Build Tool (BE)    | go build                    | Standard Go toolchain                                        |
+| Build Tool (FE)    | Vite + npm                  | Fast HMR, TypeScript, Tailwind integration                  |
+| Data Loading       | Runtime file read at startup| Allows data refresh without redeploy; binary stays small     |
+| Client-Server API  | REST JSON endpoints          | Simple, standard, easy to debug                             |
+| Pagination         | Server-side, 100 per batch  | Small payloads (~15-20KB), fast round-trips                 |
+| Search             | Linear scan in-memory       | 4,274 structs with strings.Contains completes in microseconds|
+| CSS                | Tailwind CSS                | Utility-first, fast iteration, Vite integration             |
 
 ---
 
@@ -36,33 +38,36 @@ browser never downloads the full dataset.
 
 ```
 ┌──────────────────┐     ┌───────────────────┐     ┌──────────────────┐
-│ api.json         │────▶│ Server Startup     │────▶│ Arc<AppData>     │
-│ (1.8MB on disk)  │     │ Parse + Index      │     │ (in-memory)      │
+│ api.json         │────▶│ Server Startup     │────▶│ AppData          │
+│ (1.8MB on disk)  │     │ Parse + Flatten    │     │ (in-memory)      │
 └──────────────────┘     └───────────────────┘     └──────────────────┘
-                                                            │
-                                  provide_context()         │
-                                                            ▼
+                                                             │
+                                                   HTTP handlers          │
+                                                             ▼
 ┌──────────────────┐     ┌───────────────────┐     ┌──────────────────┐
-│ Browser (WASM)   │────▶│ Server Functions   │────▶│ Search/Sort/     │
-│ Leptos reactive  │     │ #[server]          │     │ Paginate data   │
-│ IntersectionObs  │     │ search_models()    │     │ in AppData       │
-│ Debounced input  │     │ get_model_detail() │     │                  │
+│ Browser          │────▶│ REST API Endpoints │────▶│ Search/Sort/     │
+│ Lit-Element      │     │ GET /api/models    │     │ Paginate data    │
+│ IntersectionObs  │     │ GET /api/models/   │     │ in AppData       │
+│ Debounced input  │     │  {provider}/{id}   │     │                  │
 └──────────────────┘     └───────────────────┘     └──────────────────┘
 ```
 
 ### 2.2 Component Responsibilities
 
-| Component            | Responsibility                                              |
-| -------------------- | ----------------------------------------------------------- |
-| `app.rs`             | Root component, provides AppData context, routes            |
-| `app_data.rs`        | Loads api.json, builds flat Vec<Model>, stores in Arc       |
-| `models.rs`          | Model structs (Serialize/Deserialize/Clone)                 |
-| `search_models`      | Server function: filter, sort, paginate, return ModelPage   |
-| `get_model_detail`   | Server function: return single model by provider + id       |
-| `model_table.rs`     | Client component: renders table, handles sort clicks        |
-| `search_box.rs`      | Client component: debounced search input, result count      |
-| `infinite_scroll.rs` | Client component: IntersectionObserver, triggers next batch |
-| `model_detail.rs`    | Client component: expanded row or page for single model     |
+| Component                  | Responsibility                                              |
+| -------------------------- | ----------------------------------------------------------- |
+| `cmd/server/main.go`       | Entry point, loads data, registers handlers, starts server  |
+| `internal/models/model.go` | Model, ModelPage, SortField structs (JSON marshal/unmarshal) |
+| `internal/data/appdata.go` | Loads api.json, builds flat []Model, stores AppData         |
+| `internal/api/handler.go`  | HTTP handlers for search and detail endpoints               |
+| `model-lens-app.ts`        | Root Lit-Element component, manages state and orchestration |
+| `model-search.ts`          | Search input with debounce, result count display            |
+| `model-table.ts`           | Table rendering + column sort                               |
+| `model-row.ts`             | Single table row                                            |
+| `model-detail.ts`          | Expanded model detail view                                  |
+| `infinite-scroll.ts`       | IntersectionObserver sentinel                               |
+| `loading-spinner.ts`       | Loading indicator                                           |
+| `api.ts`                   | Fetch helpers for REST API                                  |
 
 ---
 
@@ -72,153 +77,139 @@ browser never downloads the full dataset.
 
 ```
 modelsdb/
-├── Cargo.toml                  # Workspace config (leptos deps)
-├── style/
-│   └── main.scss               # Tailwind imports + custom styles
-├── src/
-│   ├── app.rs                  # Root component, shell layout
-│   ├── app_data.rs             # Data loading + AppData struct
-│   ├── models.rs               # Model, ModelPage, SortField, SortDir
-│   ├── server_fns.rs           # #[server] functions
-│   ├── components/
-│   │   ├── mod.rs
-│   │   ├── search_box.rs       # Search input with debounce
-│   │   ├── model_table.rs      # Table rendering + column sort
-│   │   ├── model_row.rs        # Single table row
-│   │   ├── model_detail.rs     # Expanded model detail view
-│   │   ├── infinite_scroll.rs  # IntersectionObserver sentinel
-│   │   └── loading.rs          # Loading spinner
-│   ├── lib.rs                  # Re-exports
-│   └── main.rs                 # Server entry point
-├── api.json                    # Data source (gitignored or bundled)
-├── bmad/
-│   └── config.yaml
-├── docs/
-│   ├── bmm-workflow-status.yaml
-│   ├── PRD.md
-│   ├── tech-spec.md
-│   └── stories/
-└── .cargo/
-    └── config.toml              # cargo-leptos target config
+├── cmd/
+│   └── server/
+│       └── main.go            # Server entry point
+├── internal/
+│   ├── models/
+│   │   └── model.go           # Model, ModelPage, SortField, SortDir
+│   ├── data/
+│   │   └── appdata.go         # AppData loading + storage
+│   └── api/
+│       └── handler.go         # HTTP handlers
+├── web/
+│   ├── index.html             # Main HTML page
+│   ├── package.json           # npm deps (lit, typescript, vite, tailwindcss)
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── src/
+│   │   ├── index.ts           # Entry point
+│   │   ├── model-lens-app.ts   # Root <model-lens-app> component
+│   │   ├── model-search.ts     # <model-search> component
+│   │   ├── model-table.ts      # <model-table> component
+│   │   ├── model-row.ts        # <model-row> component
+│   │   ├── model-detail.ts     # <model-detail> component
+│   │   ├── infinite-scroll.ts  # <infinite-scroll> component
+│   │   ├── loading-spinner.ts  # <loading-spinner> component
+│   │   └── api.ts              # Fetch helpers
+│   └── styles/
+│       └── main.css            # Tailwind imports + custom styles
+├── api.json                    # Data source
+├── go.mod
+├── go.sum
+├── Makefile                    # Build + dev commands
+└── docs/
 ```
 
 ### 3.2 Core Data Structures
 
-```rust
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Model {
-    pub provider_id: String,
-    pub id: String,
-    pub name: String,
-    pub family: Option<String>,
-    pub attachment: Option<bool>,
-    pub reasoning: Option<bool>,
-    pub tool_call: Option<bool>,
-    pub temperature: Option<bool>,
-    pub knowledge: Option<String>,
-    pub release_date: Option<String>,
-    pub last_updated: Option<String>,
-    pub modalities: Option<Modalities>,
-    pub open_weights: Option<bool>,
-    pub cost: Option<Cost>,
-    pub limit: Option<ModelLimit>,
+```go
+type Model struct {
+    ProviderID  string      `json:"provider_id"`
+    ID          string      `json:"id"`
+    Name        string      `json:"name"`
+    Family      *string     `json:"family"`
+    Attachment  *bool       `json:"attachment"`
+    Reasoning   *bool       `json:"reasoning"`
+    ToolCall    *bool       `json:"tool_call"`
+    Temperature *bool       `json:"temperature"`
+    Knowledge   *string     `json:"knowledge"`
+    ReleaseDate *string     `json:"release_date"`
+    LastUpdated *string     `json:"last_updated"`
+    Modalities  *Modalities `json:"modalities"`
+    OpenWeights *bool       `json:"open_weights"`
+    Cost        *Cost       `json:"cost"`
+    Limit       *ModelLimit `json:"limit"`
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Modalities {
-    pub input: Vec<String>,
-    pub output: Vec<String>,
+type Modalities struct {
+    Input  []string `json:"input"`
+    Output []string `json:"output"`
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Cost {
-    pub input: f64,
-    pub output: f64,
+type Cost struct {
+    Input  float64 `json:"input"`
+    Output float64 `json:"output"`
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ModelLimit {
-    pub context: u64,
-    pub output: u64,
+type ModelLimit struct {
+    Context int `json:"context"`
+    Output  int `json:"output"`
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ModelPage {
-    pub models: Vec<Model>,
-    pub total: usize,
+type ModelPage struct {
+    Models []Model `json:"models"`
+    Total  int     `json:"total"`
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub enum SortField {
-    Provider,
-    Name,
-    Context,
-    InputCost,
-    OutputCost,
-}
+type SortField string
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub enum SortDir {
-    Asc,
-    Desc,
-}
+const (
+    SortProvider  SortField = "provider"
+    SortName      SortField = "name"
+    SortContext   SortField = "context"
+    SortInputCost SortField = "input_cost"
+    SortOutputCost SortField = "output_cost"
+)
 
-#[derive(Clone, Debug)]
-pub struct AppData {
-    pub models: Vec<Model>,
+type SortDir string
+
+const (
+    SortAsc  SortDir = "asc"
+    SortDesc SortDir = "desc"
+)
+
+type AppData struct {
+    Models []Model
 }
 ```
 
-### 3.3 Server Function Signatures
+### 3.3 API Endpoint Signatures
 
-```rust
-#[server]
-pub async fn search_models(
-    query: Option<String>,
-    sort_by: SortField,
-    sort_dir: SortDir,
-    offset: usize,
-    limit: usize,
-) -> Result<ModelPage, ServerFnError> {
-    let app_data = expect_context::<Arc<AppData>>();
-    let models = &app_data.models;
+```go
+// GET /api/models?query=&sort_by=name&sort_dir=asc&offset=0&limit=100
+func (h *Handler) SearchModels(w http.ResponseWriter, r *http.Request) {
+    query := r.URL.Query().Get("query")
+    sortBy := SortField(r.URL.Query().Get("sort_by"))
+    sortDir := SortDir(r.URL.Query().Get("sort_dir"))
+    offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+    limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 
-    let filtered: Vec<&Model> = match query {
-        None | Some(ref q) if q.trim().is_empty() => models.iter().collect(),
-        Some(q) => {
-            let q_lower = q.to_lowercase();
-            models.iter()
-                .filter(|m| {
-                    m.name.to_lowercase().contains(&q_lower)
-                        || m.id.to_lowercase().contains(&q_lower)
-                        || m.family.as_ref().map_or(false, |f| f.to_lowercase().contains(&q_lower))
-                        || m.provider_id.to_lowercase().contains(&q_lower)
-                })
-                .collect()
-        }
-    };
+    if limit > 100 || limit <= 0 {
+        limit = 100
+    }
 
-    let total = filtered.len();
-    let sorted = sort_models(&filtered, &sort_by, &sort_dir);
-    let page: Vec<Model> = sorted.into_iter()
-        .skip(offset)
-        .take(limit)
-        .cloned()
-        .collect();
+    filtered := h.appData.Filter(query)
+    sorted := h.appData.Sort(filtered, sortBy, sortDir)
+    total := len(sorted)
+    page := paginate(sorted, offset, limit)
 
-    Ok(ModelPage { models: page, total })
+    json.NewEncoder(w).Encode(ModelPage{Models: page, Total: total})
 }
 
-#[server]
-pub async fn get_model_detail(
-    provider_id: String,
-    model_id: String,
-) -> Result<Model, ServerFnError> {
-    let app_data = expect_context::<Arc<AppData>>();
-    app_data.models.iter()
-        .find(|m| m.provider_id == provider_id && m.id == model_id)
-        .cloned()
-        .ok_or_else(|| ServerFnError::new("Model not found"))
+// GET /api/models/{provider_id}/{model_id}
+func (h *Handler) GetModelDetail(w http.ResponseWriter, r *http.Request) {
+    providerID := r.PathValue("provider_id")
+    modelID := r.PathValue("model_id")
+
+    model, err := h.appData.Find(providerID, modelID)
+    if err != nil {
+        http.Error(w, "model not found", http.StatusNotFound)
+        return
+    }
+    json.NewEncoder(w).Encode(model)
 }
 ```
 
@@ -226,49 +217,49 @@ pub async fn get_model_detail(
 
 #### Search Box
 
-```rust
-#[component]
-fn SearchBox(
-    query: Signal<Option<String>>,
-    set_query: WriteSignal<Option<String>>,
-    total: Signal<usize>,
-    all_count: usize,
-) -> impl IntoView {
-    // 150ms debounce via leptos::watch or setTimeout
-    // Displays "Showing {total} of {all_count} models"
+```typescript
+@customElement('model-search')
+export class ModelSearch extends LitElement {
+  @property() query = '';
+  @property() total = 0;
+  @property() allCount = 0;
+
+  // 150ms debounce on input
+  // Dispatches 'search-changed' event with detail: { query }
+  // Displays "Showing {total} of {allCount} models"
 }
 ```
 
 #### Model Table
 
-```rust
-#[component]
-fn ModelTable(
-    models: Signal<Vec<Model>>,
-    sort_by: Signal<SortField>,
-    sort_dir: Signal<SortDir>,
-    on_sort: Callback<(SortField, SortDir)>,
-    on_row_click: Callback<(String, String)>,
-) -> impl IntoView {
-    // Columns: Provider, Name, ID, Context, Input Cost, Output Cost, Features
-    // Context formatted: 128000 -> "128K"
-    // Cost formatted: 0.29 -> "$0.29"
-    // Features: badge pills for tool_call, reasoning, attachment, open_weights
+```typescript
+@customElement('model-table')
+export class ModelTable extends LitElement {
+  @property() models: Model[] = [];
+  @property() sortBy: string = 'name';
+  @property() sortDir: string = 'asc';
+
+  // Columns: Provider, Name, ID, Context, Input Cost, Output Cost, Features
+  // Context formatted: 128000 -> "128K"
+  // Cost formatted: 0.29 -> "$0.29"
+  // Features: badge pills for tool_call, reasoning, attachment, open_weights
+  // Dispatches 'sort-changed' and 'row-clicked' events
 }
 ```
 
 #### Infinite Scroll Sentinel
 
-```rust
-#[component]
-fn InfiniteScroll(
-    on_load_more: Callback<()>,
-    is_fetching: Signal<bool>,
-) -> impl IntoView {
-    // Renders a sentinel div at the bottom of the list
-    // Uses IntersectionObserver (via wasm-bindgen or leptos-use)
-    // When sentinel enters viewport, calls on_load_more
-    // Shows loading indicator while is_fetching is true
+```typescript
+@customElement('infinite-scroll')
+export class InfiniteScroll extends LitElement {
+  @property() isFetching = false;
+  @property() hasMore = true;
+
+  // Renders a sentinel div at bottom
+  // Uses IntersectionObserver on sentinel
+  // When sentinel enters viewport AND !isFetching AND hasMore:
+  //   dispatches 'load-more' event
+  // Shows loading spinner while isFetching
 }
 ```
 
@@ -280,56 +271,56 @@ fn InfiniteScroll(
 
 ```
 Server Start
-    │
-    ▼
-Load api.json from filesystem (std::fs::read_to_string)
-    │
-    ▼
-Parse JSON -> HashMap<String, Provider> (serde_json::from_str)
-    │
-    ▼
-Flatten to Vec<Model> (iterate providers, push provider_id into each model)
-    │
-    ▼
-Wrap in Arc<AppData> -> provide_context()
-    │
-    ▼
-Leptos SSR: render first 100 models as HTML
-    │
-    ▼
-Send to browser + WASM bundle
+    |
+    v
+Load api.json from filesystem (os.ReadFile)
+    |
+    v
+Parse JSON -> map[string]Provider (json.Unmarshal)
+    |
+    v
+Flatten to []Model (iterate providers, push provider_id into each model)
+    |
+    v
+Store in AppData struct
+    |
+    v
+Register HTTP handlers on ServeMux
+    |
+    v
+Start listening on :3000
 ```
 
 ### 4.2 Client Interaction Sequence
 
 ```
-Browser receives SSR HTML
-    │
-    ▼
-WASM Hydrates -> Search box becomes interactive
-    │
+Browser loads index.html + Lit-Element bundle
+    |
+    v
+Client fetches GET /api/models?offset=0&limit=100
+    |
     ├── User types in search box
-    │       │
-    │       ▼ 150ms debounce
-    │       Client calls search_models(query, sort, 0, 100)
-    │       │
-    │       ▼ Server returns ModelPage
-    │       Client resets scroll, renders 100 matches
-    │
+    |       |
+    |       v 150ms debounce
+    |       Client calls GET /api/models?query=xxx&offset=0&limit=100
+    |       |
+    |       v Server returns ModelPage JSON
+    |       Client resets scroll, renders 100 matches
+    |
     ├── User scrolls down
-    │       │
-    │       ▼ IntersectionObserver triggers
-    │       Client calls search_models(query, sort, offset+=100, 100)
-    │       │
-    │       ▼ Server returns next batch
-    │       Client appends to list
-    │
+    |       |
+    |       v IntersectionObserver triggers
+    |       Client calls GET /api/models?query=xxx&offset=100&limit=100
+    |       |
+    |       v Server returns next batch
+    |       Client appends to list
+    |
     └── User clicks column header
-            │
-            ▼ Toggle sort_dir, set sort_by
-            Client calls search_models(query, new_sort, 0, 100)
-            │
-            ▼ Server returns sorted ModelPage
+            |
+            v Toggle sort_dir, set sort_by
+            Client calls GET /api/models?sort_by=xxx&sort_dir=asc&offset=0&limit=100
+            |
+            v Server returns sorted ModelPage
             Client resets scroll, renders sorted results
 ```
 
@@ -346,7 +337,7 @@ WASM Hydrates -> Search box becomes interactive
 | `8192`    | `8K`    |
 | `32000`   | `32K`   |
 
-Algorithm: if value >= 1_000_000, show `X.XM`; if >= 1_000, show `XK`; else show
+Algorithm: if value >= 1,000,000, show `X.XM`; if >= 1,000, show `XK`; else show
 as-is.
 
 ### 5.2 Cost Display
@@ -369,40 +360,60 @@ as-is.
 
 ---
 
-## 6. Leptos Configuration
+## 6. Go Module Configuration
 
-### 6.1 Cargo.toml (Key Dependencies)
+### 6.1 go.mod
 
-```toml
-[dependencies]
-leptos = { version = "0.7", features = ["ssr"] }
-leptos_meta = "0.7"
-leptos_axum = "0.7"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-axum = "0.8"
-tokio = { version = "1", features = ["full"] }
+```
+module github.com/user/modelsdb
 
-[features]
-default = []
-ssr = ["leptos/ssr", "leptos_axum", "dep:axum", "dep:tokio"]
-hydrate = ["leptos/hydrate"]
+go 1.22
 ```
 
-### 6.2 Build & Run
+No external dependencies — uses only Go standard library (net/http, encoding/json, etc.)
+
+### 6.2 package.json (Frontend)
+
+```json
+{
+  "name": "modellens",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lit": "^3"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vite": "^6",
+    "tailwindcss": "^4",
+    "@tailwindcss/vite": "^4",
+    "postcss": "^8",
+    "autoprefixer": "^10"
+  }
+}
+```
+
+### 6.3 Build & Run
 
 ```bash
-# Install cargo-leptos (if not installed)
-cargo install cargo-leptos
+# Development (backend)
+go run ./cmd/server
 
-# Development (hot-reload)
-cargo leptos watch
+# Development (frontend)
+cd web && npm run dev
 
-# Production build
-cargo leptos build --release
+# Production build (frontend)
+cd web && npm run build
+
+# Production build (backend, embeds web/dist)
+go build -o bin/server ./cmd/server
 
 # Run production server
-cargo leptos serve --release
+./bin/server
 ```
 
 ---
@@ -411,12 +422,12 @@ cargo leptos serve --release
 
 | Scenario                 | Behavior                                    | HTTP Status |
 | ------------------------ | ------------------------------------------- | ----------- |
-| api.json not found       | Server panic at startup with clear message  | N/A (crash) |
-| Invalid JSON in api.json | Server panic at startup with parse error    | N/A (crash) |
+| api.json not found       | Server log.Fatal at startup with clear msg  | N/A (crash) |
+| Invalid JSON in api.json | Server log.Fatal at startup with parse err  | N/A (crash) |
 | Empty search results     | Return `ModelPage { models: [], total: 0 }` | 200         |
-| Model not found (detail) | Return `Err(ServerFnError)`                 | 500         |
+| Model not found (detail) | Return JSON error                           | 404         |
 | Invalid offset/limit     | Clamp offset, cap limit at 100              | 200         |
-| Server function failure  | Client shows error state, retry button      | 500         |
+| API call failure         | Client shows error state, retry button      | N/A (client)|
 
 ### Startup Validation
 
@@ -427,30 +438,27 @@ cargo leptos serve --release
 
 ## 8. Dependencies
 
-### Runtime (Server)
+### Runtime (Server - Go)
 
-| Crate       | Version | Purpose                          |
-| ----------- | ------- | -------------------------------- |
-| leptos      | 0.7     | Full-stack reactive framework    |
-| leptos_meta | 0.7     | `<Title/>`, `<Meta/>` components |
-| leptos_axum | 0.7     | Axum integration for Leptos      |
-| axum        | 0.8     | HTTP server                      |
-| tokio       | 1       | Async runtime                    |
-| serde       | 1       | Serialization/deserialization    |
-| serde_json  | 1       | JSON parsing                     |
+| Package       | Purpose                     |
+| ------------- | --------------------------- |
+| net/http      | HTTP server + router        |
+| encoding/json | JSON marshal/unmarshal      |
+| os            | File reading                |
+| fmt           | Formatting + logging        |
+| strings       | Search (Contains, ToLower)  |
+| sort          | Slice sorting               |
+| strconv       | Query param parsing         |
+| log           | Startup logging             |
 
-### Client-Only (WASM)
+### Frontend (npm)
 
-| Crate      | Version | Purpose                                        |
-| ---------- | ------- | ---------------------------------------------- |
-| leptos-use | 0.15    | `use_debounce_fn`, `use_intersection_observer` |
-
-### Build
-
-| Tool         | Purpose                   |
-| ------------ | ------------------------- |
-| cargo-leptos | Build tool for SSR + WASM |
-| tailwindcss  | Utility CSS framework     |
+| Package    | Version | Purpose                           |
+| ---------- | ------- | --------------------------------- |
+| lit        | ^3      | Web Components framework          |
+| typescript | ^5      | Type checking                     |
+| vite       | ^6      | Build tool + dev server           |
+| tailwindcss| ^4      | Utility CSS framework             |
 
 ---
 
@@ -460,16 +468,16 @@ cargo leptos serve --release
 
 | Category    | Approach            | Coverage                               |
 | ----------- | ------------------- | -------------------------------------- |
-| Unit        | Rust #[test]        | Data loading, search, sort, formatting |
-| Server Fn   | Leptos server tests | search_models, get_model_detail        |
-| Integration | wasm-pack test      | Component rendering, signal reactivity |
+| Unit (Go)   | go test             | Data loading, search, sort, formatting |
+| Unit (TS)   | Vitest / web-test-runner | Component rendering, formatting      |
+| Integration | HTTP test (net/http/httptest) | API endpoints             |
 
 ### 9.2 Unit Test Cases
 
 **Data Loading:**
 
 - Parse api.json successfully
-- Flattened Vec contains all models from all providers
+- Flattened slice contains all models from all providers
 - Each model has correct provider_id
 - Startup fails with clear message if file missing
 
@@ -479,43 +487,38 @@ cargo leptos serve --release
 - Case-insensitive match on name, id, family, provider_id
 - Substring match ("gpt" matches "gpt-4o" and "GPT-4")
 - Query "anthropic" returns only anthropic models
-- No matches returns empty Vec with total: 0
+- No matches returns empty slice with total: 0
 
 **Sort:**
 
 - Sort by Name ascending/descending
 - Sort by Context (numeric) ascending/descending
-- Sort by InputCost (handles None values — sorted to end)
+- Sort by InputCost (handles nil values — sorted to end)
 - Sort by Provider ascending
 
 **Formatting:**
 
 - 128000 -> "128K"
 - 1000000 -> "1M"
-- Cost None -> "—"
+- Cost nil -> "—"
 - Cost 0.29 -> "$0.29"
 
-### 9.3 Server Function Test Example
+### 9.3 Server Handler Test Example
 
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
+```go
+func TestSearchModels(t *testing.T) {
+    data := testAppData()
+    handler := NewHandler(data)
 
-    #[test]
-    fn test_search_by_name() {
-        let data = test_app_data();
-        let result = search_in_memory(&data, Some("claude".into()), SortField::Name, SortDir::Asc, 0, 100);
-        assert!(result.total > 0);
-        assert!(result.models[0].name.to_lowercase().contains("claude"));
-    }
+    req := httptest.NewRequest("GET", "/api/models?query=claude&offset=0&limit=100", nil)
+    w := httptest.NewRecorder()
+    handler.SearchModels(w, req)
 
-    #[test]
-    fn test_pagination_offset() {
-        let data = test_app_data();
-        let page0 = search_in_memory(&data, None, SortField::Name, SortDir::Asc, 0, 100);
-        let page1 = search_in_memory(&data, None, SortField::Name, SortDir::Asc, 100, 100);
-        assert_ne!(page0.models[0].id, page1.models[0].id);
+    var page ModelPage
+    json.NewDecoder(w.Body).Decode(&page)
+
+    if page.Total == 0 {
+        t.Error("expected results for 'claude'")
     }
 }
 ```
@@ -524,15 +527,15 @@ mod tests {
 
 ## 10. Risks & Mitigations
 
-| Risk                        | Impact | Likelihood | Mitigation                                             |
-| --------------------------- | ------ | ---------- | ------------------------------------------------------ |
-| Leptos 0.7 API instability  | High   | Low        | Pin exact version, check changelog before upgrading    |
-| cargo-leptos tool issues    | Medium | Medium     | Use latest stable, fallback to manual build            |
-| WASM bundle size            | Medium | Low        | Monitor with `cargo leptos build`, use tree-shaking    |
-| IntersectionObserver compat | Low    | Low        | Use leptos-use abstraction, fallback to scroll event   |
-| api.json schema changes     | Medium | Low        | Deserialize with Option<T> for all non-required fields |
-| Search performance at 10K+  | Low    | Low        | Linear scan sufficient up to ~50K; add index later     |
-| Tailwind CSS build config   | Low    | Medium     | Follow cargo-leptos tailwind guide                     |
+| Risk                          | Impact | Likelihood | Mitigation                                             |
+| ----------------------------- | ------ | ---------- | ------------------------------------------------------ |
+| Go ServeMux pattern matching  | Low    | Low        | Go 1.22+ supports path params natively                 |
+| Lit-Element bundle size       | Medium | Low        | Lit is ~5KB gzipped, very small                       |
+| CORS in dev (different ports) | Medium | High       | Vite proxy config or Go server CORS middleware         |
+| IntersectionObserver compat   | Low    | Low        | Use IntersectionObserver polyfill or scroll fallback   |
+| api.json schema changes       | Medium | Low        | Use pointer types for all non-required fields          |
+| Search performance at 10K+    | Low    | Low        | Linear scan sufficient up to ~50K; add index later     |
+| Tailwind CSS build config     | Low    | Medium     | Use Vite plugin for Tailwind v4                        |
 
 ---
 
@@ -547,7 +550,7 @@ mod tests {
 | Sort by column changes order        | Visual: first row changes after click      |
 | Model detail shows all fields       | Click row, verify all fields displayed     |
 | Mobile viewport usable              | Chrome DevTools responsive mode, iPhone SE |
-| Server memory <50MB                 | `ps aux` or `/proc` check after startup    |
+| Server memory <50MB                 | Check RSS after startup                    |
 | Server startup <500ms               | Timing log on startup                      |
 
 ---
@@ -564,30 +567,27 @@ mod tests {
 | Comparison mode           | ❌ Out | PRD P3, future roadmap          |
 | User accounts             | ❌ Out | PRD open question, deferred     |
 | Custom api.json URL       | ❌ Out | PRD open question, deferred     |
-| compile-time include_str! | ❌ Out | Deferred to future optimization |
+| compile-time embedding    | ❌ Out | Deferred to future optimization |
 
 ---
 
 ## 13. Implementation Order
 
-1. **Project Scaffolding** — `cargo leptos new`, Cargo.toml deps, file structure
-2. **Data Layer** — `app_data.rs`, `models.rs`, JSON loading, flatten into
-   Vec<Model>
-3. **Server Functions** — `search_models()`, `get_model_detail()`, wire up
-   AppData context
-4. **Root Shell** — `app.rs`, layout with header + search box area + table area
-5. **Search Box** — `search_box.rs`, debounced input, result count display
-6. **Model Table** — `model_table.rs`, column headers, row rendering, sort
-   interaction
-7. **Infinite Scroll** — `infinite_scroll.rs`, IntersectionObserver sentinel,
+1. **Project Scaffolding** — go mod init, npm init, Vite + Lit setup, Go server
+2. **Data Layer** — `AppData`, `Model` structs, JSON loading, flatten into
+   `[]Model`
+3. **Server API** — HTTP handlers for search and detail endpoints
+4. **Root Shell** — `model-lens-app.ts`, layout with header + search + table
+5. **Search Box** — `model-search.ts`, debounced input, result count display
+6. **Model Table** — `model-table.ts`, column headers, row rendering, sort
+7. **Infinite Scroll** — `infinite-scroll.ts`, IntersectionObserver sentinel,
    batch loading
-8. **Model Detail** — `model_detail.rs`, expand row or navigate to detail
+8. **Model Detail** — `model-detail.ts`, expand row or navigate to detail
 9. **Styling** — Tailwind CSS, responsive layout, badge pills, loading states
-10. **Testing** — Unit tests for data/search/sort, integration tests for server
-    functions
+10. **Testing** — go test for data/search/sort, httptest for API endpoints
 11. **Polish** — Error states, empty state, mobile responsiveness, a11y
 
 ---
 
 **Document Status:** Ready for Implementation\
-**Next Step:** Create sprint plan and stories (`/sprint-planning`)
+**Next Step:** Create sprint plan and stories

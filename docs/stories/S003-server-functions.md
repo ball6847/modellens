@@ -1,4 +1,4 @@
-# S003: Server Functions (search + detail)
+# S003: REST API Endpoints (search + detail)
 
 **Priority:** Critical\
 **Depends on:** S002\
@@ -8,49 +8,52 @@
 
 ## User Story
 
-As a client, I need server functions to search/filter/sort/paginate models and
+As a client, I need REST API endpoints to search/filter/sort/paginate models and
 get individual model details so that I can browse the database without
 downloading it all.
 
 ## Acceptance Criteria
 
 ```gherkin
-Given the server has AppData in context
-When I call search_models(None, SortField::Name, SortDir::Asc, 0, 100)
+Given the server has AppData loaded
+When I call GET /api/models?offset=0&limit=100
 Then I receive ModelPage with 100 models sorted by name and total=4274
 
-When I call search_models(Some("gpt"), SortField::Name, SortDir::Asc, 0, 100)
+When I call GET /api/models?query=gpt&offset=0&limit=100
 Then I receive models where name/id/family/provider_id contains "gpt" (case-insensitive)
 
-When I call search_models(Some("xyz"), _, _, 0, 100)
+When I call GET /api/models?query=xyz&offset=0&limit=100
 Then I receive ModelPage { models: [], total: 0 }
 
-When I call get_model_detail("anthropic", "claude-3.5-sonnet")
-Then I receive the matching Model struct
+When I call GET /api/models/anthropic/claude-3.5-sonnet
+Then I receive the matching Model JSON
 ```
 
 ## Tasks
 
-1. Create `src/server_fns.rs`
-2. Implement
-   `search_models(query, sort_by, sort_dir, offset, limit) -> Result<ModelPage, ServerFnError>`
+1. Create `internal/api/handler.go` with `Handler` struct holding `*AppData`
+2. Implement `SearchModels(w, r)` handler
+   - Parse query params: query, sort_by, sort_dir, offset, limit
    - Filter: case-insensitive substring on name, id, family, provider_id
-   - Sort: by SortField in SortDir (handle None values — sort to end)
-   - Paginate: skip(offset).take(limit), cap limit at 100
-   - Return ModelPage { models, total }
-3. Implement
-   `get_model_detail(provider_id, model_id) -> Result<Model, ServerFnError>`
+   - Sort: by SortField in SortDir (handle nil values — sort to end)
+   - Paginate: skip offset, take limit, cap limit at 100
+   - Return ModelPage as JSON
+3. Implement `GetModelDetail(w, r)` handler
+   - Path params: provider_id, model_id
    - Find by provider_id + id match
-   - Return Err if not found
-4. Extract search/sort logic into pure functions for testability
-5. Add `#[server]` attribute macros
+   - Return 404 if not found
+4. Extract search/sort logic into pure functions on AppData for testability
+5. Register routes in main.go: `mux.HandleFunc("GET /api/models", ...)` and
+   `mux.HandleFunc("GET /api/models/{provider_id}/{model_id}", ...)`
+6. Add CORS headers for development
 
 ## Technical Notes
 
-- Use `expect_context::<Arc<AppData>>()` inside server functions
-- Sort: match on SortField, compare with cmp, handle Option with
-  `.unwrap_or(f64::MAX)` for costs
-- Limit cap: `let limit = limit.min(100);`
+- Go 1.22+ ServeMux supports `GET /api/models/{provider_id}/{model_id}` patterns
+- Sort: use sort.Slice with comparison function, handle nil with sentinels
+- Limit cap: `if limit > 100 { limit = 100 }`
+- Use `json.NewEncoder(w).Encode()` for JSON responses
+- Set `Content-Type: application/json` header
 
 ## Verification
 
@@ -59,5 +62,5 @@ Then I receive the matching Model struct
 - Unit test: "xyz" returns total: 0
 - Unit test: pagination offset produces different first model
 - Unit test: sort ascending vs descending produces reversed order
-- Unit test: get_model_detail with valid id returns model
-- Unit test: get_model_detail with invalid id returns error
+- Unit test: get model detail with valid id returns model
+- Unit test: get model detail with invalid id returns 404

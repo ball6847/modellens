@@ -28,20 +28,20 @@ Then the detail view collapses
 
 ## Tasks
 
-1. Create `src/components/model_detail.rs`
+1. Create `web/src/model-detail.ts` as Lit component
 2. Implement as expandable section below the clicked row (or a side panel)
-3. Call `get_model_detail(provider_id, model_id)` to fetch full data
+3. Fetch `GET /api/models/{provider_id}/{model_id}` for full data
 4. Display all Model fields in a structured layout (key-value pairs or grid)
 5. Format values: context as K/M, costs as $X.XX, dates as-is, booleans as
    Yes/No
 6. Modalities: display as comma-separated lists (input: text, image; output:
    text)
 7. Close button or toggle behavior (click same row to collapse)
-8. Track `selected_model: Signal<Option<Model>>`
+8. Expose `@property() model` for parent to set selected model
 
 ## Technical Notes
 
-- Can use `create_action` for get_model_detail call
+- Can fetch detail from API or use the data already in the table row
 - Expanded row approach: insert detail row after clicked row in table
 - Alternative: side panel with slide-in animation
 - Feature flags display as badges (same style as table badges)

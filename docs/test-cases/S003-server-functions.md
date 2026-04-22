@@ -1,4 +1,4 @@
-# Test Cases: S003 - Server Functions (search + detail)
+# Test Cases: S003 - REST API Endpoints (search + detail)
 
 **Story:** [S003-server-functions.md](../stories/S003-server-functions.md) |
 **Test Cases:** this file **Total Cases:** 16 | P0: 8 | P1: 4
@@ -10,13 +10,11 @@
 **Priority:** P0 (Critical) **Type:** Functional (Unit) **Preconditions:**
 AppData loaded with 4,274 models
 
-1. Call `search_models(None, SortField::Name, SortDir::Asc, 0, 100)`
-   **Expected:** `result.total == 4274` **Expected:**
-   `result.models.len() == 100`
+1. Call `GET /api/models?offset=0&limit=100` **Expected:**
+   `result.total == 4274` **Expected:** `len(result.models) == 100`
 
-2. Call
-   `search_models(Some("".to_string()), SortField::Name, SortDir::Asc, 0, 100)`
-   **Expected:** `result.total == 4274` (whitespace-only treated as empty)
+2. Call `GET /api/models?query=&offset=0&limit=100` **Expected:**
+   `result.total == 4274` (empty string treated as no filter)
 
 ---
 
@@ -24,12 +22,12 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(Some("claude"), SortField::Name, SortDir::Asc, 0, 100)`
-   **Expected:** `result.total > 0` **Expected:** Every model in result has
+1. Call `GET /api/models?query=claude&offset=0&limit=100` **Expected:**
+   `result.total > 0` **Expected:** Every model in result has
    name/id/family/provider_id containing "claude" (case-insensitive)
 
-2. Call `search_models(Some("CLAUDE"), SortField::Name, SortDir::Asc, 0, 100)`
-   **Expected:** Same total count as lowercase "claude"
+2. Call `GET /api/models?query=CLAUDE&offset=0&limit=100` **Expected:** Same
+   total count as lowercase "claude"
 
 ---
 
@@ -37,8 +35,8 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(Some("gpt-4o"), _, _, 0, 100)` **Expected:** Results
-   include models with id containing "gpt-4o"
+1. Call `GET /api/models?query=gpt-4o&offset=0&limit=100` **Expected:**
+   Results include models with id containing "gpt-4o"
 
 ---
 
@@ -46,7 +44,7 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(Some("qwen"), _, _, 0, 100)` **Expected:** Results
+1. Call `GET /api/models?query=qwen&offset=0&limit=100` **Expected:** Results
    include models where family contains "qwen"
 
 ---
@@ -55,7 +53,7 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(Some("anthropic"), _, _, 0, 100)` **Expected:** All
+1. Call `GET /api/models?query=anthropic&offset=0&limit=100` **Expected:** All
    results have `provider_id` containing "anthropic"
 
 ---
@@ -64,8 +62,9 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(Some("xyznonexistent123"), _, _, 0, 100)` **Expected:**
-   `result.total == 0` **Expected:** `result.models` is empty Vec
+1. Call `GET /api/models?query=xyznonexistent123&offset=0&limit=100`
+   **Expected:** `result.total == 0` **Expected:** `result.models` is empty
+   array
 
 ---
 
@@ -73,13 +72,13 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::Name, SortDir::Asc, 0, 100)` → page0
-2. Call `search_models(None, SortField::Name, SortDir::Asc, 100, 100)` → page1
-   **Expected:** `page0.models[0].id != page1.models[0].id` **Expected:** No
-   model IDs overlap between page0 and page1
+1. Call `GET /api/models?sort_by=name&sort_dir=asc&offset=0&limit=100` → page0
+2. Call `GET /api/models?sort_by=name&sort_dir=asc&offset=100&limit=100` →
+   page1 **Expected:** `page0.models[0].id != page1.models[0].id` **Expected:**
+   No model IDs overlap between page0 and page1
 
-3. Call `search_models(None, SortField::Name, SortDir::Asc, 4200, 100)` → last
-   page **Expected:** `result.models.len() < 100` (partial page) **Expected:**
+3. Call `GET /api/models?offset=4200&limit=100` → last page **Expected:**
+   `len(result.models) < 100` (partial page) **Expected:**
    `result.total == 4274`
 
 ---
@@ -88,8 +87,8 @@ AppData loaded with 4,274 models
 
 **Priority:** P1 (High) **Type:** Functional (Unit)
 
-1. Call `search_models(None, _, _, 0, 500)` (request 500) **Expected:**
-   `result.models.len() <= 100` (server caps at 100)
+1. Call `GET /api/models?limit=500` (request 500) **Expected:**
+   `len(result.models) <= 100` (server caps at 100)
 
 ---
 
@@ -97,7 +96,7 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::Name, SortDir::Asc, 0, 100)`
+1. Call `GET /api/models?sort_by=name&sort_dir=asc&offset=0&limit=100`
    **Expected:** Models sorted alphabetically: first model name <= second model
    name
 
@@ -107,7 +106,7 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::Name, SortDir::Desc, 0, 100)`
+1. Call `GET /api/models?sort_by=name&sort_dir=desc&offset=0&limit=100`
    **Expected:** First model name >= second model name (reverse alphabetical)
 
 ---
@@ -116,35 +115,35 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::Context, SortDir::Desc, 0, 100)`
+1. Call `GET /api/models?sort_by=context&sort_dir=desc&offset=0&limit=100`
    **Expected:** Models with highest context window appear first **Expected:**
-   Models with `limit == None` appear at the end
+   Models with `limit == nil` appear at the end
 
-2. Call `search_models(None, SortField::Context, SortDir::Asc, 0, 100)`
+2. Call `GET /api/models?sort_by=context&sort_dir=asc&offset=0&limit=100`
    **Expected:** Models with lowest context window appear first
 
 ---
 
-## TC-S003-012: Sort by InputCost (handles None)
+## TC-S003-012: Sort by InputCost (handles nil)
 
 **Priority:** P1 (High) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::InputCost, SortDir::Asc, 0, 100)`
+1. Call `GET /api/models?sort_by=input_cost&sort_dir=asc&offset=0&limit=100`
    **Expected:** Models with cost appear first (sorted by cost) **Expected:**
-   Models with `cost == None` appear at the end
+   Models with `cost == nil` appear at the end
 
-2. Call `search_models(None, SortField::InputCost, SortDir::Desc, 0, 100)`
-   **Expected:** Models with highest cost appear first **Expected:** Models with
-   `cost == None` appear at the end
+2. Call `GET /api/models?sort_by=input_cost&sort_dir=desc&offset=0&limit=100`
+   **Expected:** Models with highest cost appear first **Expected:** Models
+   with `cost == nil` appear at the end
 
 ---
 
-## TC-S003-013: Sort by OutputCost (handles None)
+## TC-S003-013: Sort by OutputCost (handles nil)
 
 **Priority:** P1 (High) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::OutputCost, SortDir::Desc, 0, 100)`
-   **Expected:** Same None-handling behavior as InputCost
+1. Call `GET /api/models?sort_by=output_cost&sort_dir=desc&offset=0&limit=100`
+   **Expected:** Same nil-handling behavior as InputCost
 
 ---
 
@@ -152,7 +151,7 @@ AppData loaded with 4,274 models
 
 **Priority:** P1 (High) **Type:** Functional (Unit)
 
-1. Call `search_models(None, SortField::Provider, SortDir::Asc, 0, 100)`
+1. Call `GET /api/models?sort_by=provider&sort_dir=asc&offset=0&limit=100`
    **Expected:** Models sorted by provider_id alphabetically
 
 ---
@@ -161,11 +160,10 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `get_model_detail("anthropic", "claude-3.5-sonnet")` (or known existing
-   model) **Expected:** Returns `Ok(Model)` with matching provider_id and id
+1. Call `GET /api/models/anthropic/claude-3.5-sonnet` (or known existing model)
+   **Expected:** Returns 200 with matching Model JSON
 
-2. Call `get_model_detail("nonexistent", "fake-model")` **Expected:** Returns
-   `Err(ServerFnError)` ("Model not found" or similar)
+2. Call `GET /api/models/nonexistent/fake-model` **Expected:** Returns 404
 
 ---
 
@@ -173,7 +171,7 @@ AppData loaded with 4,274 models
 
 **Priority:** P0 (Critical) **Type:** Functional (Unit)
 
-1. Call `search_models(Some("gpt"), SortField::Context, SortDir::Desc, 0, 10)`
+1. Call `GET /api/models?query=gpt&sort_by=context&sort_dir=desc&offset=0&limit=10`
    **Expected:** Results contain "gpt" substring, sorted by context descending,
-   limited to 10 **Expected:** `result.total` reflects total "gpt" matches (not
-   just 10)
+   limited to 10 **Expected:** `result.total` reflects total "gpt" matches
+   (not just 10)

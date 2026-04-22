@@ -19,10 +19,10 @@ communication_language: "English"
 document_output_language: "English"
 
 # Project Metadata
-project_description: "High-performance LLM model database browser — Rust/Axum server with in-memory data, Leptos WASM client"
+project_description: "High-performance LLM model database browser — Go server with in-memory data, Lit-Element frontend, Tailwind CSS"
 tech_stack:
-  - "Rust"
-  - "Leptos 0.7+"
-  - "Axum"
-  - "WASM"
-  - "cargo-leptos"
+  - "Go"
+  - "Lit-Element"
+  - "TypeScript"
+  - "Tailwind CSS"
+  - "Vite"

@@ -27,7 +27,7 @@ Cases:** this file **Total Cases:** 9 | P0: 5 | P1: 3
 
 3. Find a model with context = 8192 **Expected:** Displays "8K" (not "8192")
 
-4. Find a model with no context limit (None) **Expected:** Displays "—" (em
+4. Find a model with no context limit (null) **Expected:** Displays "—" (em
    dash)
 
 ---
@@ -40,7 +40,7 @@ Cases:** this file **Total Cases:** 9 | P0: 5 | P1: 3
 
 2. Find model with input cost = 10.0 **Expected:** Displays "$10.00"
 
-3. Find model with cost = None **Expected:** Displays "—" (em dash)
+3. Find model with cost = null **Expected:** Displays "—" (em dash)
 
 ---
 
@@ -97,8 +97,8 @@ Cases:** this file **Total Cases:** 9 | P0: 5 | P1: 3
 
 **Priority:** P1 (High) **Type:** Functional
 
-1. Click any model row **Expected:** Callback fires with
-   `(provider_id, model_id)` of clicked row **Expected:** Detail view opens for
+1. Click any model row **Expected:** Custom event fires with
+   `{ providerId, modelId }` of clicked row **Expected:** Detail view opens for
    that model (if S008 implemented) or event is logged
 
 ---

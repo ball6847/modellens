@@ -34,7 +34,7 @@
 
 1. Keep scrolling until all models loaded
 2. Scroll to very bottom **Expected:** No loading indicator **Expected:** No
-   additional server function calls (check Network tab)
+   additional API calls (check Network tab)
 
 ---
 
@@ -53,8 +53,8 @@
 **Priority:** P1 (High) **Type:** Functional
 
 1. Scroll down to load 200+ models
-2. Click a column header to change sort **Expected:** Model list resets to first
-   100 sorted results **Expected:** Scroll position resets to top
+2. Click a column header to change sort **Expected:** Model list resets to
+   first 100 sorted results **Expected:** Scroll position resets to top
 
 ---
 

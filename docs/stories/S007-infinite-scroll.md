@@ -27,22 +27,22 @@ And scrolling loads more matching models
 
 ## Tasks
 
-1. Create `src/components/infinite_scroll.rs`
+1. Create `web/src/infinite-scroll.ts` as Lit component
 2. Render a sentinel `<div>` at the bottom of the model list
-3. Use `leptos_use::use_intersection_observer` on the sentinel
-4. When sentinel enters viewport AND `is_fetching == false` AND more results
-   exist: call `search_models(query, sort, offset+100, 100)`
-5. Append new models to existing list (don't replace)
-6. Show loading spinner while `is_fetching == true`
-7. Track `offset` signal: starts at 0, increments by 100 on each batch
-8. Stop loading when `models.len() >= total` from ModelPage
+3. Use `IntersectionObserver` on the sentinel in `connectedCallback()`
+4. When sentinel enters viewport AND `isFetching == false` AND more results
+   exist: dispatch `load-more` custom event
+5. Show `<loading-spinner>` while `isFetching == true`
+6. Expose `@property() isFetching` and `@property() hasMore` for parent to set
+7. Disconnect observer in `disconnectedCallback()`
 
 ## Technical Notes
 
-- `is_fetching: Signal<bool>` — set true before server call, false after
-- On search/sort change: reset offset to 0, replace models (don't append)
-- Sentinel: empty div with `ref` bound for IntersectionObserver
-- `use_intersection_observer` from leptos-use 0.15
+- `isFetching` and `hasMore` set by parent component
+- On search/sort change: parent resets offset to 0, replaces models (doesn't
+  append)
+- Sentinel: empty div used as IntersectionObserver root
+- IntersectionObserver with `{ rootMargin: '200px' }` for early triggering
 
 ## Verification
 

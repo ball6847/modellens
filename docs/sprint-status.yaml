@@ -23,7 +23,7 @@ stories:
     depends_on: ["S001"]
 
   - id: "S003"
-    title: "Server Functions (search + detail)"
+    title: "REST API Endpoints (search + detail)"
     file: "docs/stories/S003-server-functions.md"
     status: "pending"
     priority: "critical"

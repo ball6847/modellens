@@ -9,11 +9,10 @@ file **Total Cases:** 9 | P0: 2 | P1: 3 | P2: 3 | P3: 1
 
 **Priority:** P0 (Critical) **Type:** Functional
 
-1. Simulate server function error (e.g., kill server, then trigger search)
-   **Expected:** Error message/banner appears **Expected:** "Retry" button
-   visible
+1. Simulate API error (e.g., kill server, then trigger search) **Expected:**
+   Error message/banner appears **Expected:** "Retry" button visible
 
-2. Click "Retry" button **Expected:** Server function re-attempted
+2. Click "Retry" button **Expected:** API call re-attempted
 
 ---
 

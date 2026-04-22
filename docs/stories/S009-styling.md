@@ -28,7 +28,7 @@ Then I see a small blue pill badge labeled "Tools"
 
 ## Tasks
 
-1. Configure Tailwind CSS with cargo-leptos (tailwind.config.js, PostCSS)
+1. Configure Tailwind CSS with Vite plugin (`@tailwindcss/vite`)
 2. Style header: dark bg, white text, padding, sticky
 3. Style search box: full-width, border, focus ring, padding
 4. Style table: `w-full`, `border-collapse`, alternating `bg-gray-50`/`bg-white`
@@ -41,11 +41,10 @@ Then I see a small blue pill badge labeled "Tools"
 
 ## Technical Notes
 
-- Tailwind with cargo-leptos: `style/main.scss` imports tailwind directives
-- `@tailwind base; @tailwind components; @tailwind utilities;`
-- May need `npx tailwindcss` in build process or cargo-leptos tailwind
-  integration
+- Tailwind v4 with Vite plugin: `import tailwindcss from '@tailwindcss/vite'`
+- Import in `main.css`: `@import "tailwindcss";`
 - Badge classes: `inline-block px-2 py-0.5 text-xs font-semibold rounded-full`
+- Use `class` in Lit render() for Tailwind classes
 
 ## Verification
 

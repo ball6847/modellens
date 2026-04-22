@@ -25,15 +25,15 @@ this file **Total Cases:** 7 | P0: 4 | P1: 2
 
 ---
 
-## TC-S005-003: Debounce prevents rapid server calls
+## TC-S005-003: Debounce prevents rapid API calls
 
 **Priority:** P1 (High) **Type:** Performance
 
 1. Open browser DevTools Network tab
 2. Type "gpt" quickly (one character at a time: g, p, t)
-3. Count server function calls in Network tab **Expected:** Only 1 call made
-   after typing stops (not 3 calls for g, gp, gpt) **Expected:** Delay of ~150ms
-   after last keystroke before call fires
+3. Count API calls in Network tab **Expected:** Only 1 call made after typing
+   stops (not 3 calls for g, gp, gpt) **Expected:** Delay of ~150ms after last
+   keystroke before call fires
 
 ---
 

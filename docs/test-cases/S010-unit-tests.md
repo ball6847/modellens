@@ -5,12 +5,12 @@ file **Total Cases:** 6 | P0: 1 | P1: 5
 
 ---
 
-## TC-S010-001: All unit tests pass with cargo test
+## TC-S010-001: All unit tests pass with go test
 
 **Priority:** P0 (Critical) **Type:** Build
 
-1. Run `cargo test` **Expected:** All tests pass (0 failures) **Expected:** No
-   test panics
+1. Run `go test ./...` **Expected:** All tests pass (0 failures) **Expected:**
+   No test panics
 
 ---
 
@@ -20,7 +20,7 @@ file **Total Cases:** 6 | P0: 1 | P1: 5
 
 1. Verify test functions exist for:
    - Parse api.json successfully
-   - Flattened Vec contains correct model count
+   - Flattened slice contains correct model count
    - Each model has correct provider_id **Expected:** At least 3 data loading
      tests
 
@@ -45,7 +45,7 @@ file **Total Cases:** 6 | P0: 1 | P1: 5
 1. Verify test functions exist for:
    - Sort by Name asc/desc
    - Sort by Context numeric
-   - Sort by InputCost with None handling
+   - Sort by InputCost with nil handling
    - Sort by Provider **Expected:** At least 4 sort tests
 
 ---
@@ -59,14 +59,16 @@ file **Total Cases:** 6 | P0: 1 | P1: 5
    - 1000000 → "1M"
    - 8192 → "8K"
    - Cost formatting ($0.29)
-   - Cost None → "—" **Expected:** At least 5 formatting tests
+   - Cost nil → "—" **Expected:** At least 5 formatting tests
 
 ---
 
-## TC-S010-006: Pagination tests exist
+## TC-S010-006: Pagination and API handler tests exist
 
 **Priority:** P1 (High) **Type:** Build
 
 1. Verify test functions exist for:
    - Different offset produces different pages
-   - Limit cap at 100 **Expected:** At least 2 pagination tests
+   - Limit cap at 100
+   - HTTP handler tests using httptest **Expected:** At least 2 pagination
+     tests + handler tests

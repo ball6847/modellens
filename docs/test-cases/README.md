@@ -1,6 +1,6 @@
 # Test Cases Index: ModelLens MVP
 
-**Version:** 1.0 **Date:** 2026-04-22 **Based on:** docs/tech-spec.md,
+**Version:** 1.1 **Date:** 2026-04-22 **Based on:** docs/tech-spec.md,
 docs/sprint-status.yaml
 
 ## Per-Story Test Plans
@@ -25,17 +25,19 @@ docs/sprint-status.yaml
 | Item       | Value                                           |
 | ---------- | ----------------------------------------------- |
 | OS         | Linux                                           |
-| Rust       | 1.90.0                                          |
-| Browser    | Chrome 130+, Firefox 130+                       |
+| Go         | 1.22+                                           |
+| Node.js    | 18+                                             |
+| Browser    | Chrome 130+, Firefox 130+, Safari, Edge         |
 | Device     | Desktop (1920x1080), Mobile (375x812 iPhone SE) |
-| Build tool | cargo-leptos                                    |
+| Build tool | go build + npm/vite                             |
 
 ## Entry/Exit Criteria
 
 **Entry:**
 
 - [ ] Story code complete
-- [ ] `cargo leptos watch` compiles without errors
+- [ ] `go build ./...` compiles without errors
+- [ ] `cd web && npm run build` compiles without errors
 
 **Exit (per story):**
 
@@ -47,17 +49,17 @@ docs/sprint-status.yaml
 
 | Risk                               | Probability | Impact   | Mitigation                          |
 | ---------------------------------- | ----------- | -------- | ----------------------------------- |
-| Leptos 0.7 API breaking            | Low         | High     | Pin exact version                   |
-| WASM hydration fails               | Medium      | Critical | Test SSR + hydration on every build |
-| cargo-leptos install issues        | Medium      | High     | Have manual build fallback          |
+| Go ServeMux pattern matching       | Low         | Low      | Go 1.22+ supports path params       |
+| Lit-Element component rendering    | Low         | Medium   | Test rendering on every build       |
+| CORS issues in dev                 | Medium      | High     | Vite proxy config or CORS middleware|
 | IntersectionObserver not supported | Low         | Medium   | Scroll event fallback               |
 
 ## Smoke Tests (run after every story)
 
 | TC ID       | Title                                    | Story | Priority |
 | ----------- | ---------------------------------------- | ----- | -------- |
-| TC-S001-002 | Project compiles with cargo leptos watch | S001  | P0       |
-| TC-S001-003 | WASM hydration works                     | S001  | P0       |
+| TC-S001-002 | Go server compiles and serves            | S001  | P0       |
+| TC-S001-003 | Vite dev server starts and proxies API   | S001  | P0       |
 | TC-S002-001 | Parse api.json successfully              | S002  | P0       |
 | TC-S003-001 | Empty query returns all models           | S003  | P0       |
 | TC-S003-006 | No-match search returns empty            | S003  | P0       |

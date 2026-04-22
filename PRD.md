@@ -12,12 +12,12 @@
 **Product Description**: ModelLens is a lightweight, high-performance web-based
 tool for browsing and searching Large Language Model (LLM) databases. It
 addresses the performance and usability limitations of existing solutions (e.g.,
-models.dev) by providing a fast, responsive interface backed by a Rust server
-with in-memory data and a Leptos WASM client.
+models.dev) by providing a fast, responsive interface backed by a Go server
+with in-memory data and a Lit-Element frontend.
 
-**One-Sentence Mission**: Deliver a blazing-fast, Rust-powered model directory
-where the server holds the full dataset in memory and the Leptos client fetches
-only what it needs — no more shipping 1.8MB of JSON to the browser.
+**One-Sentence Mission**: Deliver a blazing-fast, Go-powered model directory
+where the server holds the full dataset in memory and the Lit-Element client
+fetches only what it needs — no more shipping 1.8MB of JSON to the browser.
 
 ---
 
@@ -33,10 +33,10 @@ MB**, users experience:
 - **Unresponsive search/filtering** when querying large datasets.
 - **Browser lag** when rendering massive DOM trees.
 
-ModelLens solves this with a **client-server architecture**: a Rust server loads
-the full `api.json` into memory at startup (no per-request I/O), and a Leptos
-WASM client fetches only the 100-model batch it needs via typed server
-functions. The browser never downloads the full 1.8MB dataset.
+ModelLens solves this with a **client-server architecture**: a Go server loads
+the full `api.json` into memory at startup (no per-request I/O), and a
+Lit-Element frontend fetches only the 100-model batch it needs via REST API
+endpoints. The browser never downloads the full 1.8MB dataset.
 
 ---
 
@@ -75,29 +75,26 @@ functions. The browser never downloads the full 1.8MB dataset.
 
 ```typescript
 interface Model {
-  id: string; // e.g., "qwen3-235b-a22b"
-  name: string; // e.g., "Qwen3-235B-A22B"
-  family?: string; // e.g., "qwen"
-  attachment?: boolean; // Supports file attachments
-  reasoning?: boolean; // Supports reasoning/thinking
-  tool_call?: boolean; // Supports function/tool calling
-  temperature?: boolean; // Supports temperature adjustment
-  knowledge?: string; // Knowledge cutoff date, e.g., "2025-04"
-  release_date?: string; // ISO date, e.g., "2025-04-29"
-  last_updated?: string; // ISO date
+  id: string;
+  name: string;
+  family?: string;
+  attachment?: boolean;
+  reasoning?: boolean;
+  tool_call?: boolean;
+  temperature?: boolean;
+  knowledge?: string;
+  release_date?: string;
+  last_updated?: string;
   modalities?: {
-    // Input/output types
-    input: string[]; // e.g., ["text", "image"]
-    output: string[]; // e.g., ["text"]
+    input: string[];
+    output: string[];
   };
-  open_weights?: boolean; // Model weights are openly available
+  open_weights?: boolean;
   cost?: {
-    // Pricing per million tokens
     input: number;
     output: number;
   };
   limit?: {
-    // Token limits
     context: number;
     output: number;
   };
@@ -105,9 +102,9 @@ interface Model {
 ```
 
 - **FR-DATA-04**: On server startup, the JSON shall be loaded into server memory
-  as a flat vector of `Model` structs enriched with `provider_id`, plus an
-  in-memory search index.
-- **FR-DATA-05**: The server shall expose the data via Leptos server functions;
+  as a flat slice of `Model` structs enriched with `provider_id`, enabling
+  efficient server-side queries.
+- **FR-DATA-05**: The server shall expose the data via REST API endpoints;
   the client never fetches or parses `api.json` directly.
 
 ### 5.2 Search & Filter
@@ -160,8 +157,8 @@ interface Model {
   virtual scrolling library is needed since the DOM never exceeds a few hundred
   nodes at a time.
 - **FR-SCROLL-04**: As the user scrolls near the bottom of the currently
-  rendered list, the client shall request the next batch (offset + 100) from the
-  server via a Leptos server function.
+  rendered list, the client shall request the next batch (offset + 100) from
+  the server via a REST API call.
 - **FR-SCROLL-05**: If a search query changes, the scroll position shall reset
   to the top, and the client shall request the first 100 matching models from
   the server.
@@ -230,10 +227,10 @@ interface Model {
 User Opens App
     |
     v
-Leptos SSR: Server renders first 100 models into HTML (instant, data in memory)
+Browser loads index.html + Lit-Element bundle
     |
     v
-Client Hydrates -> Interactive Search Box (Time to Interactive < 3s)
+Client fetches GET /api/models?offset=0&limit=100 -> First 100 models
     |
     v
 User Types in Search Box
@@ -242,10 +239,10 @@ User Types in Search Box
 Debounce (150ms)
     |
     v
-Client calls Leptos server function: search(query, offset=0, limit=100)
+Client calls GET /api/models?query=gpt&offset=0&limit=100
     |
     v
-Server queries in-memory index -> Returns { models: [...], total: N }
+Server queries in-memory data -> Returns { models: [...], total: N }
     |
     v
 Client Resets Scroll to Top -> Renders First 100 Matches
@@ -254,7 +251,7 @@ Client Resets Scroll to Top -> Renders First 100 Matches
 User Scrolls Down
     |
     v
-IntersectionObserver Triggers -> Client calls server function: search(query, offset+=100, limit=100)
+IntersectionObserver Triggers -> Client calls GET /api/models?query=gpt&offset=100&limit=100
     |
     v
 Server returns next batch -> Client appends to list
@@ -264,9 +261,9 @@ Server returns next batch -> Client appends to list
 
 | State       | Description                                                 |
 | ----------- | ----------------------------------------------------------- |
-| `idle`      | App loaded, no search query, showing top 100 models (SSR'd) |
+| `idle`      | App loaded, no search query, showing top 100 models         |
 | `searching` | User is typing (debounce active)                            |
-| `fetching`  | Server function call in flight (search or next batch)       |
+| `fetching`  | API call in flight (search or next batch)                   |
 | `filtered`  | Search applied, showing subset of models, scroll at top     |
 | `empty`     | Search returned 0 results; show "No models found" message   |
 
@@ -276,71 +273,51 @@ Server returns next batch -> Client appends to list
 
 ### 8.1 Stack
 
-| Layer              | Technology                                                          |
-| ------------------ | ------------------------------------------------------------------- |
-| **Framework**      | Leptos 0.7+ (full-stack: SSR + WASM client)                         |
-| **Server Runtime** | Axum (Leptos default)                                               |
-| **Client**         | Leptos WASM (compiled from Rust)                                    |
-| **Build Tool**     | `cargo-leptos`                                                      |
-| **Data Source**    | `api.json` loaded at server startup via `include_str!` or file read |
+| Layer              | Technology                                                    |
+| ------------------ | ------------------------------------------------------------- |
+| **Server**         | Go (net/http with Go 1.22+ ServeMux)                          |
+| **Frontend**       | Lit-Element (TypeScript Web Components)                       |
+| **CSS**            | Tailwind CSS                                                  |
+| **Build Tool**     | `go build` + `npm` (Vite for frontend bundling)              |
+| **Data Source**    | `api.json` loaded at server startup via runtime file read     |
 
 ### 8.2 Architecture Layers
 
 ```
 +-----------------------------------+
-|  Browser (WASM)                   |
-|  - Leptos reactive UI             |
-|  - Search input (debounced)       |
+|  Browser (Lit-Element)            |
+|  - Web Components (custom elems)  |
+|  - Search input (debounced)      |
 |  - IntersectionObserver for scroll|
-|  - Server function calls          |
+|  - fetch() API calls              |
 +-----------------------------------+
-           |  HTTP (Leptos server fn protocol)
+           |  HTTP (REST JSON)
            v
 +-----------------------------------+
-|  Server (Axum + Leptos)           |
-|  - Server functions (typed API)   |
-|  - In-memory model Vec<Model>     |
-|  - In-memory search index         |
+|  Server (Go net/http)             |
+|  - REST handlers (typed)          |
+|  - In-memory []Model              |
+|  - Search/sort/paginate logic     |
 +-----------------------------------+
            |
            v
 +-----------------------------------+
 |  Data Layer                       |
-|  - api.json (loaded once at       |
-|    startup, kept in Arc<RwLock>)  |
+|  - api.json (loaded once at      |
+|    startup, kept in sync.Once)    |
 +-----------------------------------+
 ```
 
-### 8.3 Leptos Server Functions
+### 8.3 REST API Endpoints
 
-The client-server contract is defined via Leptos `#[server]` functions:
+The client-server contract is defined via REST endpoints:
 
-```rust
-#[derive(Clone, Serialize, Deserialize)]
-struct ModelPage {
-    models: Vec<Model>,
-    total: usize,
-}
+```
+GET /api/models?query=&sort_by=name&sort_dir=asc&offset=0&limit=100
+  -> { "models": [...], "total": 4274 }
 
-#[server]
-async fn search_models(
-    query: Option<String>,
-    sort_by: SortField,
-    sort_dir: SortDir,
-    offset: usize,
-    limit: usize,
-) -> Result<ModelPage, ServerFnError> {
-    // Server has access to in-memory data via provide_context
-    // Returns filtered, sorted, paginated slice
-}
-
-#[server]
-async fn get_model_detail(
-    provider_id: String,
-    model_id: String,
-) -> Result<Model, ServerFnError> {
-    // Returns single model by provider + model ID
-}
+GET /api/models/{provider_id}/{model_id}
+  -> { "provider_id": "...", "id": "...", ... }
 ```
 
 ### 8.4 Server Data Lifecycle
@@ -349,32 +326,32 @@ async fn get_model_detail(
 Server Startup
     |
     v
-Load api.json from file (or include_str! for embedded)
+Load api.json from file (os.ReadFile)
     |
     v
-Parse JSON -> Vec<Model> (enriched with provider_id)
+Parse JSON -> map[string]Provider (json.Unmarshal)
     |
     v
-Build search index (HashMap<String, Vec<usize>> on name/id/family/provider lowercase tokens)
+Flatten to []Model (iterate providers, inject provider_id)
     |
     v
-Store in Leptos provide_context() as Arc<AppData>
+Store in AppData struct (sync.Once for safe init)
     |
     v
-Server ready — all server functions access AppData via expect_context()
+Register HTTP handlers -> Server ready
 ```
 
 ### 8.5 Performance Strategy
 
 1. **In-Memory Dataset**: The full ~4,274 models live in server RAM. No disk I/O
-   on requests. With Rust's zero-copy deserialization, startup is < 500ms.
-2. **Server-Side Search**: Linear scan over 4,274 Rust structs with
-   `str::contains` is ~microseconds. No need for a complex inverted index for
+   on requests. With Go's efficient JSON parsing, startup is < 500ms.
+2. **Server-Side Search**: Linear scan over 4,274 Go structs with
+   `strings.Contains` is ~microseconds. No need for a complex inverted index for
    this dataset size — but one can be added later if the dataset grows.
 3. **Small Payloads**: Each client request returns only 100 models (~15-20KB
    JSON), not the full 1.8MB.
-4. **SSR First Paint**: Leptos renders the first 100 models as server-side HTML,
-   so the user sees content before WASM even loads.
+4. **Client-Side Rendering**: Lit-Element renders efficiently with reactive
+   properties, updating only what changes.
 5. **Debounced Requests**: The client debounces search input at 150ms to avoid
    request flooding.
 6. **No Virtual Scroll Needed**: The DOM only grows as the user scrolls, capped
@@ -385,24 +362,23 @@ Server ready — all server functions access AppData via expect_context()
 
 ## 9. Data Flow Summary
 
-| Step  | Action      | Location         | Detail                                                                                               |
-| ----- | ----------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| **1** | **Startup** | Server           | Load `api.json` from filesystem, parse into `Vec<Model>`, store in `Arc<AppData>` via Leptos context |
-| **2** | **SSR**     | Server           | Leptos renders first 100 models as HTML, sends to browser                                            |
-| **3** | **Hydrate** | Browser          | WASM hydrates the SSR'd HTML, search box becomes interactive                                         |
-| **4** | **Search**  | Browser → Server | Client calls `search_models(query, sort, offset=0, limit=100)` server function                       |
-| **5** | **Return**  | Server → Browser | Server filters in-memory data, returns `ModelPage { models: [...], total: N }`                       |
-| **6** | **Render**  | Browser          | Client renders the 100 models, updates count display                                                 |
-| **7** | **Scroll**  | Browser → Server | IntersectionObserver triggers `search_models(query, sort, offset+=100, limit=100)` for next batch    |
+| Step  | Action      | Location         | Detail                                                                                    |
+| ----- | ----------- | ---------------- | ----------------------------------------------------------------------------------------- |
+| **1** | **Startup** | Server           | Load `api.json` from filesystem, parse into `[]Model`, store in `AppData`                 |
+| **2** | **Load**    | Browser          | Fetch `index.html` + Lit-Element JS bundle                                                |
+| **3** | **First**   | Browser → Server | Client calls `GET /api/models?offset=0&limit=100`                                         |
+| **4** | **Return**  | Server → Browser | Server filters in-memory data, returns `{ models: [...], total: N }`                      |
+| **5** | **Render**  | Browser          | Lit-Element renders the 100 models, updates count display                                |
+| **6** | **Search**  | Browser → Server | Client calls `GET /api/models?query=gpt&offset=0&limit=100`                               |
+| **7** | **Scroll**  | Browser → Server | IntersectionObserver triggers `GET /api/models?query=gpt&offset=100&limit=100` for next batch |
 
 ---
 
 ## 10. Acceptance Criteria (Definition of Done)
 
 - [ ] **AC-01**: The application loads and displays the first 100 models within
-      3 seconds. The server has data in memory so the first SSR response is
-      near-instant.
-- [ ] **AC-02**: Typing "gpt" in the search box calls the server function and
+      3 seconds.
+- [ ] **AC-02**: Typing "gpt" in the search box calls the API and
       returns matching models (provider or model name contains "gpt",
       case-insensitive) within 100ms round-trip on localhost.
 - [ ] **AC-03**: Searching "anthropic" returns only models under the `anthropic`
@@ -420,31 +396,29 @@ Server ready — all server functions access AppData via expect_context()
 
 ## 11. Future Roadmap / Nice-to-Have
 
-| Feature                | Description                                                                                                                         | Priority |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| **Advanced Filters**   | Toggle filters for capabilities (e.g., only show models with `tool_call` or `open_weights`). Server function accepts filter params. | P2       |
-| **Provider Page**      | Clicking a provider name navigates to a dedicated page showing all models from that provider.                                       | P2       |
-| **Pricing Calculator** | Built-in cost calculator based on input/output token count.                                                                         | P3       |
-| **Data Refresh**       | Server endpoint to re-fetch `api.json` at runtime without restart.                                                                  | P3       |
-| **Bookmarking**        | Allow users to bookmark/star favorite models for quick access (client-side only).                                                   | P3       |
-| **Comparison Mode**    | Select 2-3 models and view their specs side-by-side.                                                                                | P3       |
+| Feature                | Description                                                                        | Priority |
+| ---------------------- | ---------------------------------------------------------------------------------- | -------- |
+| **Advanced Filters**   | Toggle filters for capabilities (e.g., only show models with `tool_call`).          | P2       |
+| **Provider Page**      | Clicking a provider name navigates to a dedicated page showing all its models.    | P2       |
+| **Pricing Calculator** | Built-in cost calculator based on input/output token count.                       | P3       |
+| **Data Refresh**       | Server endpoint to re-fetch `api.json` at runtime without restart.                 | P3       |
+| **Bookmarking**        | Allow users to bookmark/star favorite models for quick access (client-side only).  | P3       |
+| **Comparison Mode**    | Select 2-3 models and view their specs side-by-side.                               | P3       |
 
 ---
 
 ## 12. Open Questions
 
-1. ~~Should the application be a single-page static app (HTML/JS) or deployed as
-   part of a larger framework?~~ **Resolved**: Leptos full-stack (Axum server +
-   WASM client).
+1. ~~What technology stack to use?~~ **Resolved**:
+   Go server + Lit-Element frontend + Tailwind CSS.
 2. Is there a need for user accounts/persisted preferences (dark mode,
    bookmarks)?
 3. Should we support importing custom `api.json` URLs, or only hardcoded to
    `models.dev/api.json`?
 4. Are there specific providers or models that should be featured/pinned at the
    top?
-5. Should `api.json` be embedded at compile time via `include_str!` or read from
-   filesystem at runtime? (Tradeoff: binary size vs. data refresh without
-   redeploy)
+5. Should `api.json` be embedded at compile time or read from filesystem at
+   runtime? (Tradeoff: binary size vs. data refresh without redeploy)
 
 ---
 
