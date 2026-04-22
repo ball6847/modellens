@@ -3,6 +3,7 @@ export interface Config {
   apiFile: string;
   apiRemote: string;
   skipSync: boolean;
+  syncInterval: number;
 }
 
 export function loadConfig(): Config {
@@ -11,5 +12,6 @@ export function loadConfig(): Config {
     apiFile: Deno.env.get("API_FILE") || "api.json",
     apiRemote: Deno.env.get("API_REMOTE") || "https://models.dev/api.json",
     skipSync: Deno.env.get("SKIP_SYNC") === "true",
+    syncInterval: parseInt(Deno.env.get("SYNC_INTERVAL") || "300", 10) * 1000,
   };
 }

@@ -4,7 +4,7 @@ import { logger } from "hono/logger";
 import { serveStatic } from "hono/deno";
 import { loadConfig } from "./config.ts";
 import { sync } from "./services/sync.ts";
-import { load, AppData } from "./services/appData.ts";
+import { load, AppData } from "./services/app-data.ts";
 import { createModelsRouter } from "./routes/models.ts";
 
 async function main() {
@@ -16,6 +16,26 @@ async function main() {
 
   const appData: AppData = await load(cfg.apiFile);
   console.log(`Loaded ${appData.models.length.toLocaleString()} models from ${cfg.apiFile}`);
+
+  if (!cfg.skipSync && cfg.syncInterval > 0) {
+    setInterval(async () => {
+      try {
+        const prevCount = appData.models.length;
+        await sync(cfg.apiFile, cfg.apiRemote);
+        const fresh = await load(cfg.apiFile);
+        appData.replace(fresh.models);
+        const currCount = appData.models.length;
+        if (currCount !== prevCount) {
+          console.log(`Data reloaded: ${prevCount.toLocaleString()} → ${currCount.toLocaleString()} models`);
+        } else {
+          console.log(`Data reloaded: ${currCount.toLocaleString()} models`);
+        }
+      } catch (err) {
+        console.error(`Sync interval failed: ${err}`);
+      }
+    }, cfg.syncInterval);
+    console.log(`Sync interval: every ${cfg.syncInterval / 1000}s`);
+  }
 
   const app = new Hono();
 

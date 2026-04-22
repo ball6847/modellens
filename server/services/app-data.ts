@@ -6,6 +6,10 @@ export class AppData {
   constructor(models: Model[]) {
     this.models = models;
   }
+
+  replace(models: Model[]) {
+    this.models = models;
+  }
 }
 
 export async function load(path: string): Promise<AppData> {

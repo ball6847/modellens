@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import type { AppData } from "../services/appData.ts";
-import { filter, sort, find, buildPage } from "../services/appData.ts";
+import type { AppData } from "../services/app-data.ts";
+import { filter, sort, find, buildPage } from "../services/app-data.ts";
 import type { SortField, SortDir } from "../types/model.ts";
 
 const VALID_SORT_FIELDS: Set<string> = new Set(["provider", "name", "context", "input_cost", "output_cost"]);
