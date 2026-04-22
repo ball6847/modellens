@@ -1,21 +1,10 @@
 # Binaries
 bin/
-
-# Go
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
+modellens
 
 # Frontend
 web/node_modules/
 web/dist/
-cmd/server/dist/*
-!cmd/server/dist/.gitkeep
-server
 
 # IDE
 .idea/
