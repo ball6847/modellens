@@ -74,13 +74,13 @@ export function ModelTable({
     <div className="overflow-x-auto mt-4">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-100 hover:bg-gray-100">
+          <TableRow className="bg-muted hover:bg-muted">
             {COLUMNS.map((col) => {
               const sortable = col.key !== "id" && col.key !== "features";
               return (
                 <TableHead
                   key={col.key}
-                  className={`text-xs uppercase text-gray-600 ${
+                  className={`text-xs uppercase text-muted-foreground ${
                     sortable ? "cursor-pointer select-none" : ""
                   }`}
                   onClick={() => handleHeaderClick(col.key)}
@@ -101,7 +101,7 @@ export function ModelTable({
             >
               <TableCell>{m.provider_id}</TableCell>
               <TableCell className="font-medium">{m.name}</TableCell>
-              <TableCell className="text-gray-500 font-mono text-xs">
+              <TableCell className="text-muted-foreground font-mono text-xs">
                 {m.id}
               </TableCell>
               <TableCell>{formatContext(m.limit?.context)}</TableCell>

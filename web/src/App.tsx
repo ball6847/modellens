@@ -3,6 +3,7 @@ import { fetchModels, type Model, type SortField, type SortDir } from "@/api";
 import { SearchBox } from "@/components/search-box";
 import { ModelTable } from "@/components/model-table";
 import { ModelDetail } from "@/components/model-detail";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -102,8 +103,13 @@ export function App() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-10 bg-gray-900 text-white px-6 py-4 shadow-md">
-        <h1 className="text-xl font-bold">ModelLens</h1>
-        <p className="text-sm text-gray-400">LLM Model Database Browser</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">ModelLens</h1>
+            <p className="text-sm text-gray-400">LLM Model Database Browser</p>
+          </div>
+          <ThemeToggle />
+        </div>
       </header>
 
       <main className="flex-1 p-6">
@@ -115,9 +121,9 @@ export function App() {
         />
 
         {error && (
-          <Card className="mt-4 border-red-300 bg-red-50">
+          <Card className="mt-4 border-destructive bg-destructive/10">
             <CardContent className="flex items-center justify-between p-4">
-              <span className="text-red-800">{error}</span>
+              <span className="text-destructive">{error}</span>
               <Button variant="destructive" size="sm" onClick={handleRetry}>
                 Retry
               </Button>
@@ -141,7 +147,7 @@ export function App() {
 
         {isFetching && (
           <div className="flex justify-center py-4">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
           </div>
         )}
 

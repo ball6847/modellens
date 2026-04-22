@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/ball6847/modelsdb/internal/api"
 	"github.com/ball6847/modelsdb/internal/data"
@@ -16,8 +17,10 @@ import (
 )
 
 type Config struct {
-	Port    int    `envconfig:"PORT" default:"3000"`
-	APIFile string `envconfig:"API_FILE" default:"api.json"`
+	Port       int    `envconfig:"PORT" default:"3000"`
+	APIFile    string `envconfig:"API_FILE" default:"api.json"`
+	APIRemote  string `envconfig:"API_REMOTE" default:"https://models.dev/api.json"`
+	SkipSync   bool   `envconfig:"SKIP_SYNC" default:"false"`
 }
 
 func main() {
@@ -57,6 +60,12 @@ func formatCount(n int) string {
 }
 
 func run(cfg Config) error {
+	if !cfg.SkipSync {
+		if err := data.Sync(cfg.APIFile, cfg.APIRemote); err != nil {
+			return fmt.Errorf("failed to sync data: %w", err)
+		}
+	}
+
 	appData, err := data.Load(cfg.APIFile)
 	if err != nil {
 		return fmt.Errorf("failed to load data: %w", err)
@@ -66,7 +75,22 @@ func run(cfg Config) error {
 
 	handler := api.NewHandler(appData)
 
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.RecoveryWithWriter(os.Stderr, func(c *gin.Context, err any) {
+		log.Error().Any("panic", err).Msg("Panic recovered")
+		c.AbortWithStatus(500)
+	}))
+	r.Use(func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		latency := time.Since(start)
+		log.Info().
+			Str("method", c.Request.Method).
+			Str("path", c.Request.URL.Path).
+			Int("status", c.Writer.Status()).
+			Dur("latency", latency).
+			Msg("request")
+	})
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, OPTIONS")

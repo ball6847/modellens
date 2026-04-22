@@ -45,6 +45,7 @@ export interface FetchModelsParams {
   sort_dir?: SortDir;
   offset?: number;
   limit?: number;
+  signal?: AbortSignal;
 }
 
 export async function fetchModels(params: FetchModelsParams = {}): Promise<ModelPage> {
@@ -56,7 +57,7 @@ export async function fetchModels(params: FetchModelsParams = {}): Promise<Model
   if (params.limit != null) searchParams.set("limit", String(params.limit));
 
   const url = `/api/models?${searchParams.toString()}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: params.signal });
   if (!response.ok) {
     throw new Error(`Failed to fetch models: ${response.status}`);
   }
