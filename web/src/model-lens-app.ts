@@ -132,8 +132,8 @@ export class ModelLensApp extends LitElement {
 
         ${isEmpty
           ? html`
-              <div class="mt-8 flex flex-col items-center justify-center py-12 text-gray-500">
-                <p class="text-lg">No models found for &ldquo;${this.query}&rdquo;</p>
+              <div style="margin-top:2rem;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 0;color:#6b7280;">
+                <p style="font-size:1.125rem;line-height:1.75rem;">No models found for &ldquo;${this.query}&rdquo;</p>
               </div>
             `
           : ""}
