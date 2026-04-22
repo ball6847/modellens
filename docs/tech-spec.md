@@ -17,18 +17,18 @@ never downloads the full dataset.
 
 ### Key Technical Decisions
 
-| Decision          | Choice                      | Rationale                                                    |
-| ----------------- | --------------------------- | ------------------------------------------------------------ |
-| Server Language    | Go                          | Fast startup, efficient concurrency, simple deployment      |
-| HTTP Router        | Go net/http (1.22+ ServeMux)| Method/path pattern matching built-in, no external deps      |
-| Frontend Framework | Lit-Element (TypeScript)    | Lightweight Web Components, fast rendering, no framework lock-in |
-| Build Tool (BE)    | go build                    | Standard Go toolchain                                        |
-| Build Tool (FE)    | Vite + npm                  | Fast HMR, TypeScript, Tailwind integration                  |
-| Data Loading       | Runtime file read at startup| Allows data refresh without redeploy; binary stays small     |
-| Client-Server API  | REST JSON endpoints          | Simple, standard, easy to debug                             |
-| Pagination         | Server-side, 100 per batch  | Small payloads (~15-20KB), fast round-trips                 |
-| Search             | Linear scan in-memory       | 4,274 structs with strings.Contains completes in microseconds|
-| CSS                | Tailwind CSS                | Utility-first, fast iteration, Vite integration             |
+| Decision           | Choice                       | Rationale                                                        |
+| ------------------ | ---------------------------- | ---------------------------------------------------------------- |
+| Server Language    | Go                           | Fast startup, efficient concurrency, simple deployment           |
+| HTTP Router        | Gin                          | Popular Go web framework, middleware support, fast               |
+| Frontend Framework | Lit-Element (TypeScript)     | Lightweight Web Components, fast rendering, no framework lock-in |
+| Build Tool (BE)    | go build                     | Standard Go toolchain                                            |
+| Build Tool (FE)    | Vite + npm                   | Fast HMR, TypeScript, Tailwind integration                       |
+| Data Loading       | Runtime file read at startup | Allows data refresh without redeploy; binary stays small         |
+| Client-Server API  | REST JSON endpoints          | Simple, standard, easy to debug                                  |
+| Pagination         | Server-side, 100 per batch   | Small payloads (~15-20KB), fast round-trips                      |
+| Search             | Linear scan in-memory        | 4,274 structs with strings.Contains completes in microseconds    |
+| CSS                | Tailwind CSS                 | Utility-first, fast iteration, Vite integration                  |
 
 ---
 
@@ -54,20 +54,20 @@ never downloads the full dataset.
 
 ### 2.2 Component Responsibilities
 
-| Component                  | Responsibility                                              |
-| -------------------------- | ----------------------------------------------------------- |
-| `cmd/server/main.go`       | Entry point, loads data, registers handlers, starts server  |
+| Component                  | Responsibility                                               |
+| -------------------------- | ------------------------------------------------------------ |
+| `cmd/server/main.go`       | Entry point, loads data, registers handlers, starts server   |
 | `internal/models/model.go` | Model, ModelPage, SortField structs (JSON marshal/unmarshal) |
-| `internal/data/appdata.go` | Loads api.json, builds flat []Model, stores AppData         |
-| `internal/api/handler.go`  | HTTP handlers for search and detail endpoints               |
-| `model-lens-app.ts`        | Root Lit-Element component, manages state and orchestration |
-| `model-search.ts`          | Search input with debounce, result count display            |
-| `model-table.ts`           | Table rendering + column sort                               |
-| `model-row.ts`             | Single table row                                            |
-| `model-detail.ts`          | Expanded model detail view                                  |
-| `infinite-scroll.ts`       | IntersectionObserver sentinel                               |
-| `loading-spinner.ts`       | Loading indicator                                           |
-| `api.ts`                   | Fetch helpers for REST API                                  |
+| `internal/data/appdata.go` | Loads api.json, builds flat []Model, stores AppData          |
+| `internal/api/handler.go`  | HTTP handlers for search and detail endpoints                |
+| `model-lens-app.ts`        | Root Lit-Element component, manages state and orchestration  |
+| `model-search.ts`          | Search input with debounce, result count display             |
+| `model-table.ts`           | Table rendering + column sort                                |
+| `model-row.ts`             | Single table row                                             |
+| `model-detail.ts`          | Expanded model detail view                                   |
+| `infinite-scroll.ts`       | IntersectionObserver sentinel                                |
+| `loading-spinner.ts`       | Loading indicator                                            |
+| `api.ts`                   | Fetch helpers for REST API                                   |
 
 ---
 
@@ -180,12 +180,12 @@ type AppData struct {
 
 ```go
 // GET /api/models?query=&sort_by=name&sort_dir=asc&offset=0&limit=100
-func (h *Handler) SearchModels(w http.ResponseWriter, r *http.Request) {
-    query := r.URL.Query().Get("query")
-    sortBy := SortField(r.URL.Query().Get("sort_by"))
-    sortDir := SortDir(r.URL.Query().Get("sort_dir"))
-    offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-    limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+func (h *Handler) SearchModels(c *gin.Context) {
+    query := c.Query("query")
+    sortBy := SortField(c.Query("sort_by"))
+    sortDir := SortDir(c.Query("sort_dir"))
+    offset, _ := strconv.Atoi(c.Query("offset"))
+    limit, _ := strconv.Atoi(c.Query("limit"))
 
     if limit > 100 || limit <= 0 {
         limit = 100
@@ -196,20 +196,20 @@ func (h *Handler) SearchModels(w http.ResponseWriter, r *http.Request) {
     total := len(sorted)
     page := paginate(sorted, offset, limit)
 
-    json.NewEncoder(w).Encode(ModelPage{Models: page, Total: total})
+    c.JSON(http.StatusOK, ModelPage{Models: page, Total: total})
 }
 
-// GET /api/models/{provider_id}/{model_id}
-func (h *Handler) GetModelDetail(w http.ResponseWriter, r *http.Request) {
-    providerID := r.PathValue("provider_id")
-    modelID := r.PathValue("model_id")
+// GET /api/models/:provider_id/:model_id
+func (h *Handler) GetModelDetail(c *gin.Context) {
+    providerID := c.Param("provider_id")
+    modelID := c.Param("model_id")
 
     model, err := h.appData.Find(providerID, modelID)
     if err != nil {
-        http.Error(w, "model not found", http.StatusNotFound)
+        c.JSON(http.StatusNotFound, gin.H{"error": "model not found"})
         return
     }
-    json.NewEncoder(w).Encode(model)
+    c.JSON(http.StatusOK, model)
 }
 ```
 
@@ -218,9 +218,9 @@ func (h *Handler) GetModelDetail(w http.ResponseWriter, r *http.Request) {
 #### Search Box
 
 ```typescript
-@customElement('model-search')
+@customElement("model-search")
 export class ModelSearch extends LitElement {
-  @property() query = '';
+  @property() query = "";
   @property() total = 0;
   @property() allCount = 0;
 
@@ -233,11 +233,11 @@ export class ModelSearch extends LitElement {
 #### Model Table
 
 ```typescript
-@customElement('model-table')
+@customElement("model-table")
 export class ModelTable extends LitElement {
   @property() models: Model[] = [];
-  @property() sortBy: string = 'name';
-  @property() sortDir: string = 'asc';
+  @property() sortBy: string = "name";
+  @property() sortDir: string = "asc";
 
   // Columns: Provider, Name, ID, Context, Input Cost, Output Cost, Features
   // Context formatted: 128000 -> "128K"
@@ -250,7 +250,7 @@ export class ModelTable extends LitElement {
 #### Infinite Scroll Sentinel
 
 ```typescript
-@customElement('infinite-scroll')
+@customElement("infinite-scroll")
 export class InfiniteScroll extends LitElement {
   @property() isFetching = false;
   @property() hasMore = true;
@@ -365,12 +365,17 @@ as-is.
 ### 6.1 go.mod
 
 ```
-module github.com/user/modelsdb
+module github.com/ball6847/modelsdb
 
-go 1.22
+go 1.26
+
+require (
+    github.com/gin-gonic/gin v1.10.1
+    github.com/kelseyhightower/envconfig v1.4.0
+    github.com/rs/zerolog v1.33.0
+    github.com/spf13/cobra v1.9.1
+)
 ```
-
-No external dependencies — uses only Go standard library (net/http, encoding/json, etc.)
 
 ### 6.2 package.json (Frontend)
 
@@ -420,14 +425,14 @@ go build -o bin/server ./cmd/server
 
 ## 7. Error Handling Strategy
 
-| Scenario                 | Behavior                                    | HTTP Status |
-| ------------------------ | ------------------------------------------- | ----------- |
-| api.json not found       | Server log.Fatal at startup with clear msg  | N/A (crash) |
-| Invalid JSON in api.json | Server log.Fatal at startup with parse err  | N/A (crash) |
-| Empty search results     | Return `ModelPage { models: [], total: 0 }` | 200         |
-| Model not found (detail) | Return JSON error                           | 404         |
-| Invalid offset/limit     | Clamp offset, cap limit at 100              | 200         |
-| API call failure         | Client shows error state, retry button      | N/A (client)|
+| Scenario                 | Behavior                                    | HTTP Status  |
+| ------------------------ | ------------------------------------------- | ------------ |
+| api.json not found       | Server log.Fatal at startup with clear msg  | N/A (crash)  |
+| Invalid JSON in api.json | Server log.Fatal at startup with parse err  | N/A (crash)  |
+| Empty search results     | Return `ModelPage { models: [], total: 0 }` | 200          |
+| Model not found (detail) | Return JSON error                           | 404          |
+| Invalid offset/limit     | Clamp offset, cap limit at 100              | 200          |
+| API call failure         | Client shows error state, retry button      | N/A (client) |
 
 ### Startup Validation
 
@@ -440,25 +445,28 @@ go build -o bin/server ./cmd/server
 
 ### Runtime (Server - Go)
 
-| Package       | Purpose                     |
-| ------------- | --------------------------- |
-| net/http      | HTTP server + router        |
-| encoding/json | JSON marshal/unmarshal      |
-| os            | File reading                |
-| fmt           | Formatting + logging        |
-| strings       | Search (Contains, ToLower)  |
-| sort          | Slice sorting               |
-| strconv       | Query param parsing         |
-| log           | Startup logging             |
+| Package        | Purpose                    |
+| -------------- | -------------------------- |
+| gin-gonic/gin  | HTTP server + router       |
+| kelseyhightower/envconfig | Env var loading |
+| rs/zerolog/log | Structured JSON logging    |
+| spf13/cobra    | CLI command management     |
+| encoding/json  | JSON marshal/unmarshal     |
+| os             | File reading               |
+| fmt            | Formatting                 |
+| strings        | Search (Contains, ToLower) |
+| sort           | Slice sorting              |
+| strconv        | Query param parsing        |
+| net/http       | HTTP status codes          |
 
 ### Frontend (npm)
 
-| Package    | Version | Purpose                           |
-| ---------- | ------- | --------------------------------- |
-| lit        | ^3      | Web Components framework          |
-| typescript | ^5      | Type checking                     |
-| vite       | ^6      | Build tool + dev server           |
-| tailwindcss| ^4      | Utility CSS framework             |
+| Package     | Version | Purpose                  |
+| ----------- | ------- | ------------------------ |
+| lit         | ^3      | Web Components framework |
+| typescript  | ^5      | Type checking            |
+| vite        | ^6      | Build tool + dev server  |
+| tailwindcss | ^4      | Utility CSS framework    |
 
 ---
 
@@ -466,11 +474,11 @@ go build -o bin/server ./cmd/server
 
 ### 9.1 Test Categories
 
-| Category    | Approach            | Coverage                               |
-| ----------- | ------------------- | -------------------------------------- |
-| Unit (Go)   | go test             | Data loading, search, sort, formatting |
-| Unit (TS)   | Vitest / web-test-runner | Component rendering, formatting      |
-| Integration | HTTP test (net/http/httptest) | API endpoints             |
+| Category    | Approach                      | Coverage                               |
+| ----------- | ----------------------------- | -------------------------------------- |
+| Unit (Go)   | go test                       | Data loading, search, sort, formatting |
+| Unit (TS)   | Vitest / web-test-runner      | Component rendering, formatting        |
+| Integration | HTTP test (net/http/httptest) | API endpoints                          |
 
 ### 9.2 Unit Test Cases
 
@@ -510,9 +518,13 @@ func TestSearchModels(t *testing.T) {
     data := testAppData()
     handler := NewHandler(data)
 
-    req := httptest.NewRequest("GET", "/api/models?query=claude&offset=0&limit=100", nil)
+    gin.SetMode(gin.TestMode)
+    r := gin.Default()
+    r.GET("/api/models", handler.SearchModels)
+
+    req, _ := http.NewRequest("GET", "/api/models?query=claude&offset=0&limit=100", nil)
     w := httptest.NewRecorder()
-    handler.SearchModels(w, req)
+    r.ServeHTTP(w, req)
 
     var page ModelPage
     json.NewDecoder(w.Body).Decode(&page)
@@ -527,15 +539,15 @@ func TestSearchModels(t *testing.T) {
 
 ## 10. Risks & Mitigations
 
-| Risk                          | Impact | Likelihood | Mitigation                                             |
-| ----------------------------- | ------ | ---------- | ------------------------------------------------------ |
-| Go ServeMux pattern matching  | Low    | Low        | Go 1.22+ supports path params natively                 |
-| Lit-Element bundle size       | Medium | Low        | Lit is ~5KB gzipped, very small                       |
-| CORS in dev (different ports) | Medium | High       | Vite proxy config or Go server CORS middleware         |
-| IntersectionObserver compat   | Low    | Low        | Use IntersectionObserver polyfill or scroll fallback   |
-| api.json schema changes       | Medium | Low        | Use pointer types for all non-required fields          |
-| Search performance at 10K+    | Low    | Low        | Linear scan sufficient up to ~50K; add index later     |
-| Tailwind CSS build config     | Low    | Medium     | Use Vite plugin for Tailwind v4                        |
+| Risk                          | Impact | Likelihood | Mitigation                                           |
+| ----------------------------- | ------ | ---------- | ---------------------------------------------------- |
+| Go ServeMux pattern matching  | Low    | Low        | Go 1.22+ supports path params natively               |
+| Lit-Element bundle size       | Medium | Low        | Lit is ~5KB gzipped, very small                      |
+| CORS in dev (different ports) | Medium | High       | Vite proxy config or Go server CORS middleware       |
+| IntersectionObserver compat   | Low    | Low        | Use IntersectionObserver polyfill or scroll fallback |
+| api.json schema changes       | Medium | Low        | Use pointer types for all non-required fields        |
+| Search performance at 10K+    | Low    | Low        | Linear scan sufficient up to ~50K; add index later   |
+| Tailwind CSS build config     | Low    | Medium     | Use Vite plugin for Tailwind v4                      |
 
 ---
 
@@ -557,17 +569,17 @@ func TestSearchModels(t *testing.T) {
 
 ## 12. Out of Scope Confirmation
 
-| Feature                   | Status | Rationale                       |
-| ------------------------- | ------ | ------------------------------- |
-| Advanced filters          | ❌ Out | PRD P2, future roadmap          |
-| Provider page             | ❌ Out | PRD P2, future roadmap          |
-| Pricing calculator        | ❌ Out | PRD P3, future roadmap          |
-| Data refresh endpoint     | ❌ Out | PRD P3, future roadmap          |
-| Bookmarking               | ❌ Out | PRD P3, future roadmap          |
-| Comparison mode           | ❌ Out | PRD P3, future roadmap          |
-| User accounts             | ❌ Out | PRD open question, deferred     |
-| Custom api.json URL       | ❌ Out | PRD open question, deferred     |
-| compile-time embedding    | ❌ Out | Deferred to future optimization |
+| Feature                | Status | Rationale                       |
+| ---------------------- | ------ | ------------------------------- |
+| Advanced filters       | ❌ Out | PRD P2, future roadmap          |
+| Provider page          | ❌ Out | PRD P2, future roadmap          |
+| Pricing calculator     | ❌ Out | PRD P3, future roadmap          |
+| Data refresh endpoint  | ❌ Out | PRD P3, future roadmap          |
+| Bookmarking            | ❌ Out | PRD P3, future roadmap          |
+| Comparison mode        | ❌ Out | PRD P3, future roadmap          |
+| User accounts          | ❌ Out | PRD open question, deferred     |
+| Custom api.json URL    | ❌ Out | PRD open question, deferred     |
+| compile-time embedding | ❌ Out | Deferred to future optimization |
 
 ---
 
