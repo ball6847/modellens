@@ -4,6 +4,7 @@ import { SearchBox } from "@/components/search-box";
 import { ProviderFilter } from "@/components/provider-filter";
 import { ModelTable } from "@/components/model-table";
 import { ModelDetail } from "@/components/model-detail";
+import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -138,11 +139,24 @@ export function App() {
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-10 bg-gray-900 text-white px-6 py-4 shadow-md">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">ModelLens</h1>
-            <p className="text-sm text-gray-400">LLM Model Database Browser</p>
+          <div className="flex items-center gap-2">
+            <Logo className="h-8 w-8" />
+            <div>
+              <h1 className="text-xl font-bold">ModelLens</h1>
+              <p className="text-sm text-gray-400">LLM Model Database Browser</p>
+            </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-4">
+            <a
+              href="https://models.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline text-sm text-gray-400 hover:text-gray-200 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white rounded"
+            >
+              Made possible by models.dev
+            </a>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

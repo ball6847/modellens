@@ -98,3 +98,10 @@ stories:
     status: "done"
     priority: "medium"
     depends_on: ["S008"]
+
+  - id: "S014"
+    title: "Branding & Credit"
+    file: "docs/stories/S014-branding-credit.md"
+    status: "done"
+    priority: "medium"
+    depends_on: ["S004"]
