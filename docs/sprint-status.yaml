@@ -84,3 +84,17 @@ stories:
     status: "done"
     priority: "low"
     depends_on: ["S007", "S008", "S009"]
+
+  - id: "S012"
+    title: "Provider Filter"
+    file: "docs/stories/S012-provider-filter.md"
+    status: "done"
+    priority: "high"
+    depends_on: ["S005"]
+
+  - id: "S013"
+    title: "Copy Model JSON"
+    file: "docs/stories/S013-copy-model-json.md"
+    status: "done"
+    priority: "medium"
+    depends_on: ["S008"]

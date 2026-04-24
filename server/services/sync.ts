@@ -12,7 +12,11 @@ async function getRemoteETag(url: string): Promise<string> {
   return etag.replace(/"/g, "");
 }
 
-async function downloadFile(localPath: string, url: string, etag: string): Promise<void> {
+async function downloadFile(
+  localPath: string,
+  url: string,
+  etag: string,
+): Promise<void> {
   const resp = await fetch(url);
   if (!resp.ok) {
     throw new Error(`GET request returned status ${resp.status}`);
@@ -36,7 +40,10 @@ function dirname(path: string): string {
   return parts.join("/") || ".";
 }
 
-export async function sync(localPath: string, remoteURL?: string): Promise<void> {
+export async function sync(
+  localPath: string,
+  remoteURL?: string,
+): Promise<void> {
   const url = remoteURL || DEFAULT_REMOTE_URL;
 
   let localETag = "";
@@ -55,7 +62,9 @@ export async function sync(localPath: string, remoteURL?: string): Promise<void>
       console.warn(`failed to check remote version, using local file: ${err}`);
       return;
     } catch {
-      throw new Error(`failed to check remote version and no local file: ${err}`);
+      throw new Error(
+        `failed to check remote version and no local file: ${err}`,
+      );
     }
   }
 
@@ -72,6 +81,8 @@ export async function sync(localPath: string, remoteURL?: string): Promise<void>
     return;
   }
 
-  console.log(`Remote file has changed, downloading (local_etag=${localETag}, remote_etag=${remoteETag})`);
+  console.log(
+    `Remote file has changed, downloading (local_etag=${localETag}, remote_etag=${remoteETag})`,
+  );
   await downloadFile(localPath, url, remoteETag);
 }

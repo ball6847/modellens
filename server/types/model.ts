@@ -36,5 +36,10 @@ export interface ModelPage {
   total: number;
 }
 
-export type SortField = "provider" | "name" | "context" | "input_cost" | "output_cost";
+export type SortField =
+  | "provider"
+  | "name"
+  | "context"
+  | "input_cost"
+  | "output_cost";
 export type SortDir = "asc" | "desc";

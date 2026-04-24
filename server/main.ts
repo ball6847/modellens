@@ -4,7 +4,7 @@ import { logger } from "hono/logger";
 import { serveStatic } from "hono/deno";
 import { loadConfig } from "./config.ts";
 import { sync } from "./services/sync.ts";
-import { load, AppData } from "./services/app-data.ts";
+import { AppData, load } from "./services/app-data.ts";
 import { createModelsRouter } from "./routes/models.ts";
 
 async function main() {
@@ -15,7 +15,9 @@ async function main() {
   }
 
   const appData: AppData = await load(cfg.apiFile);
-  console.log(`Loaded ${appData.models.length.toLocaleString()} models from ${cfg.apiFile}`);
+  console.log(
+    `Loaded ${appData.models.length.toLocaleString()} models from ${cfg.apiFile}`,
+  );
 
   if (!cfg.skipSync && cfg.syncInterval > 0) {
     setInterval(async () => {
@@ -26,7 +28,9 @@ async function main() {
         appData.replace(fresh.models);
         const currCount = appData.models.length;
         if (currCount !== prevCount) {
-          console.log(`Data reloaded: ${prevCount.toLocaleString()} → ${currCount.toLocaleString()} models`);
+          console.log(
+            `Data reloaded: ${prevCount.toLocaleString()} → ${currCount.toLocaleString()} models`,
+          );
         } else {
           console.log(`Data reloaded: ${currCount.toLocaleString()} models`);
         }
@@ -44,6 +48,8 @@ async function main() {
 
   const modelsRouter = createModelsRouter(appData);
   app.route("/api/models", modelsRouter);
+
+  app.get("/api/providers", (c) => c.json(appData.providers()));
 
   app.get("/*", serveStatic({ root: "./web/dist" }));
 

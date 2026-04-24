@@ -8,12 +8,8 @@ interface SearchBoxProps {
   onSearch: (query: string) => void;
 }
 
-export function SearchBox({ query, total, allCount, onSearch }: SearchBoxProps) {
+export function SearchBox({ query, onSearch }: SearchBoxProps) {
   const [localQuery, setLocalQuery] = useState(query);
-
-  useEffect(() => {
-    setLocalQuery(query);
-  }, [query]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -26,18 +22,13 @@ export function SearchBox({ query, total, allCount, onSearch }: SearchBoxProps) 
   }, [localQuery, query, onSearch]);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" role="search">
-      <Input
-        type="text"
-        className="w-full sm:max-w-md"
-        placeholder="Search models..."
-        aria-label="Search models"
-        value={localQuery}
-        onChange={(e) => setLocalQuery(e.target.value)}
-      />
-      <span className="whitespace-nowrap text-sm text-gray-600">
-        Showing {total.toLocaleString()} of {allCount.toLocaleString()} models
-      </span>
-    </div>
+    <Input
+      type="text"
+      className="w-full sm:max-w-md"
+      placeholder="Search models..."
+      aria-label="Search models"
+      value={localQuery}
+      onChange={(e) => setLocalQuery(e.target.value)}
+    />
   );
 }

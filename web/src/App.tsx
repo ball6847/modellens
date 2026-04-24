@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { fetchModels, type Model, type SortField, type SortDir } from "@/api";
+import { fetchModels, fetchProviders, type Model, type SortField, type SortDir } from "@/api";
 import { SearchBox } from "@/components/search-box";
+import { ProviderFilter } from "@/components/provider-filter";
 import { ModelTable } from "@/components/model-table";
 import { ModelDetail } from "@/components/model-detail";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -16,14 +17,16 @@ export function App() {
   const [sortBy, setSortBy] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [query, setQuery] = useState("");
+  const [provider, setProvider] = useState<string | null>(null);
+  const [providers, setProviders] = useState<string[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const fetchParamsRef = useRef({ query: "", sortBy: "name" as SortField, sortDir: "asc" as SortDir, offset: 0 });
+  const fetchParamsRef = useRef({ query: "", provider: null as string | null, sortBy: "name" as SortField, sortDir: "asc" as SortDir, offset: 0 });
 
-  const doFetch = useCallback(async (replace: boolean, params: { query: string; sortBy: SortField; sortDir: SortDir; offset: number }) => {
+  const doFetch = useCallback(async (replace: boolean, params: { query: string; provider: string | null; sortBy: SortField; sortDir: SortDir; offset: number }) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
@@ -32,6 +35,7 @@ export function App() {
     try {
       const page = await fetchModels({
         query: params.query,
+        provider: params.provider ?? undefined,
         sort_by: params.sortBy,
         sort_dir: params.sortDir,
         offset: replace ? 0 : params.offset,
@@ -55,9 +59,33 @@ export function App() {
 
   useEffect(() => {
     document.title = "ModelLens - LLM Model Browser";
-    doFetch(true, fetchParamsRef.current);
-    return () => abortControllerRef.current?.abort();
-  }, [doFetch]);
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const params = fetchParamsRef.current;
+    fetchModels({
+      query: params.query,
+      provider: params.provider ?? undefined,
+      sort_by: params.sortBy,
+      sort_dir: params.sortDir,
+      offset: 0,
+      limit: LIMIT,
+      signal: controller.signal,
+    }).then((page) => {
+      setModels(page.models);
+      setTotal(page.total);
+      setAllCount((prev) => (prev === 0 ? page.total : prev));
+      setIsFetching(false);
+    }).catch((err) => {
+      if (err instanceof Error && err.name === "AbortError") return;
+      setError(err instanceof Error ? err.message : "Failed to fetch models");
+      setIsFetching(false);
+    });
+
+    fetchProviders().then(setProviders).catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const currentRef = loadMoreRef.current;
@@ -85,6 +113,12 @@ export function App() {
     doFetch(true, fetchParamsRef.current);
   }, [doFetch]);
 
+  const handleProviderChange = useCallback((newProvider: string | null) => {
+    setProvider(newProvider);
+    fetchParamsRef.current = { ...fetchParamsRef.current, provider: newProvider, offset: 0 };
+    doFetch(true, fetchParamsRef.current);
+  }, [doFetch]);
+
   const handleSort = useCallback((newSortBy: SortField, newSortDir: SortDir) => {
     setSortBy(newSortBy);
     setSortDir(newSortDir);
@@ -98,7 +132,7 @@ export function App() {
   }, [doFetch]);
 
   const hasMore = models.length < total;
-  const isEmpty = !isFetching && !error && models.length === 0 && total === 0 && query !== "";
+  const isEmpty = !isFetching && !error && models.length === 0 && total === 0 && (query !== "" || provider !== null);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -113,12 +147,24 @@ export function App() {
       </header>
 
       <main className="flex-1 p-6">
-        <SearchBox
-          query={query}
-          total={total}
-          allCount={allCount}
-          onSearch={handleSearch}
-        />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <ProviderFilter
+              providers={providers}
+              value={provider}
+              onChange={handleProviderChange}
+            />
+            <SearchBox
+              query={query}
+              total={total}
+              allCount={allCount}
+              onSearch={handleSearch}
+            />
+          </div>
+          <span className="whitespace-nowrap text-sm text-gray-600">
+            Showing {total.toLocaleString()} of {allCount.toLocaleString()} models
+          </span>
+        </div>
 
         {error && (
           <Card className="mt-4 border-destructive bg-destructive/10">
@@ -133,7 +179,7 @@ export function App() {
 
         {isEmpty && (
           <div className="mt-8 flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <p className="text-lg">No models found for "{query}"</p>
+            <p className="text-lg">No models found</p>
           </div>
         )}
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Model } from "@/api";
 import { formatContext, formatCost, getModelFeatures } from "@/lib/formatters";
 import {
@@ -16,6 +17,7 @@ interface ModelDetailProps {
 }
 
 export function ModelDetail({ model, onClose }: ModelDetailProps) {
+  const [copied, setCopied] = useState(false);
   const features = getModelFeatures(model);
 
   const colorMap: Record<string, string> = {
@@ -75,7 +77,24 @@ export function ModelDetail({ model, onClose }: ModelDetailProps) {
             </div>
           ))}
         </div>
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const { provider_id: providerId, ...data } = model;
+              void providerId;
+              const json = JSON.stringify(data, null, 2);
+              try {
+                await navigator.clipboard.writeText(json);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              } catch {
+                // clipboard API unavailable — fail silently
+              }
+            }}
+          >
+            {copied ? "Copied!" : "Copy JSON"}
+          </Button>
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

@@ -41,6 +41,7 @@ export type SortDir = "asc" | "desc";
 
 export interface FetchModelsParams {
   query?: string;
+  provider?: string;
   sort_by?: SortField;
   sort_dir?: SortDir;
   offset?: number;
@@ -51,6 +52,7 @@ export interface FetchModelsParams {
 export async function fetchModels(params: FetchModelsParams = {}): Promise<ModelPage> {
   const searchParams = new URLSearchParams();
   if (params.query) searchParams.set("query", params.query);
+  if (params.provider) searchParams.set("provider", params.provider);
   if (params.sort_by) searchParams.set("sort_by", params.sort_by);
   if (params.sort_dir) searchParams.set("sort_dir", params.sort_dir);
   if (params.offset != null) searchParams.set("offset", String(params.offset));
@@ -71,4 +73,12 @@ export async function fetchModelDetail(providerId: string, modelId: string): Pro
     throw new Error(`Failed to fetch model detail: ${response.status}`);
   }
   return response.json() as Promise<Model>;
+}
+
+export async function fetchProviders(): Promise<string[]> {
+  const response = await fetch("/api/providers");
+  if (!response.ok) {
+    throw new Error(`Failed to fetch providers: ${response.status}`);
+  }
+  return response.json() as Promise<string[]>;
 }
