@@ -1,6 +1,4 @@
-import { mergeProps } from "@base-ui/react/merge-props"
-import { useRender } from "@base-ui/react/use-render"
-
+import * as React from "react"
 import { cn } from "@/lib/utils"
 import { badgeVariants } from "@/components/ui/badge-variants"
 import type { BadgeVariantProps } from "@/components/ui/badge-variants"
@@ -8,23 +6,16 @@ import type { BadgeVariantProps } from "@/components/ui/badge-variants"
 function Badge({
   className,
   variant = "default",
-  render,
   ...props
-}: useRender.ComponentProps<"span"> & BadgeVariantProps) {
-  return useRender({
-    defaultTagName: "span",
-    props: mergeProps<"span">(
-      {
-        className: cn(badgeVariants({ variant }), className),
-      },
-      props
-    ),
-    render,
-    state: {
-      slot: "badge",
-      variant,
-    },
-  })
+}: React.ComponentProps<"span"> & BadgeVariantProps) {
+  return (
+    <span
+      data-slot="badge"
+      data-variant={variant}
+      className={cn(badgeVariants({ variant }), className)}
+      {...props}
+    />
+  )
 }
 
 export { Badge }
